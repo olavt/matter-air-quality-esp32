@@ -111,6 +111,8 @@ Select this menu choice from Visual Studio Code:
 
 View->Command Palette
 
+Note! To use the JTAG debugging connect the USB-C cable to the right USB-port on the ESP32-C6 dev kit.
+
 ## Change settings from WiFi to Thread
 
 ![Open ESP-IDF Terminal](./images/open-esp-idf-terminal.png)
