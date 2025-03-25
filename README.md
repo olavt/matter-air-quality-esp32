@@ -111,7 +111,6 @@ Select this menu choice from Visual Studio Code:
 
 View->Command Palette
 
-
 ## Change settings from WiFi to Thread
 
 ![Open ESP-IDF Terminal](./images/open-esp-idf-terminal.png)
