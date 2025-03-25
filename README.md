@@ -70,6 +70,32 @@ Select the Espressif ESP-IDF extension in the Visual Studio Code menu, expand th
 
 Select the default options.
 
+## Create a new project based on the light example
 
+Click on "Show examples".
 
+![Create New Project](./images/create-new-project.png)
 
+![Select Light ERxample](./images/select-light-example.png)
+
+Click on the "light" example in the list.
+
+![Select Framework To Use](./images/select-framework-to-use.png)
+
+![Select Location For Creating Project](./images/set-location-for-creating-project.png)
+
+## Select Port To Use
+
+![Select Port To Use](./images/select-port-to-use.png)
+
+## Set Expressif Device Target
+
+![Set Expressif Device Target](./images/set-expressif-device-target.png)
+
+## Change settings from WiFi to Thread
+
+![Open ESP-IDF Terminal](./images/open-esp-idf-terminal.png)
+
+```
+idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.c6_thread" set-target esp32c6
+```
