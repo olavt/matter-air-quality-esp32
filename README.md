@@ -46,6 +46,10 @@ Visit https://code.visualstudio.com/download and follow the instructions to down
 
 ### Install ESP-IDF
 
+The documentation for the ESP-IDF Extension for Visual Studio Code can be found here:
+
+https://docs.espressif.com/projects/vscode-esp-idf-extension/en/latest/
+
 Click on the Extensions icon in Visual Studio Code and search for "Espressif". Select the "ESP-IDF" extension and install it.
 
 ![Install ESP-IDF](./images/install-esp-idf-extension.png)
@@ -80,11 +84,18 @@ Select the ESP-Matter Framework.
 
 ![Select Framework To Use](./images/select-framework-to-use.png)
 
+Click on the "light" example in the list of example applications.
+
 ![Select Light Example](./images/select-light-example.png)
 
-Click on the "light" example in the list.
+Click "Select location for creating light project":
 
 ![Select Location For Creating Project](./images/set-location-for-creating-project.png)
+
+## Select Flash Method
+
+![Select Flash Method](./images/select-flash-method.png)
+
 
 ## Select Port To Use
 
@@ -93,6 +104,13 @@ Click on the "light" example in the list.
 ## Set Expressif Device Target
 
 ![Set Expressif Device Target](./images/set-expressif-device-target.png)
+
+## Configure OpenOCD (for debugging)
+
+Select this menu choice from Visual Studio Code:
+
+View->Command Palette
+
 
 ## Change settings from WiFi to Thread
 
