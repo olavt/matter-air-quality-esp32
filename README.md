@@ -76,11 +76,11 @@ Click on "Show examples".
 
 ![Create New Project](./images/create-new-project.png)
 
-![Select Light ERxample](./images/select-light-example.png)
+![Select Framework To Use](./images/select-framework-to-use.png)
+
+![Select Light Example](./images/select-light-example.png)
 
 Click on the "light" example in the list.
-
-![Select Framework To Use](./images/select-framework-to-use.png)
 
 ![Select Location For Creating Project](./images/set-location-for-creating-project.png)
 
