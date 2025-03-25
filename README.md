@@ -76,6 +76,8 @@ Click on "Show examples".
 
 ![Create New Project](./images/create-new-project.png)
 
+Select the ESP-Matter Framework.
+
 ![Select Framework To Use](./images/select-framework-to-use.png)
 
 ![Select Light Example](./images/select-light-example.png)
