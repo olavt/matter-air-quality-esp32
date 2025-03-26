@@ -96,7 +96,6 @@ Click "Select location for creating light project":
 
 ![Select Flash Method](./images/select-flash-method.png)
 
-
 ## Select Port To Use
 
 ![Select Port To Use](./images/select-port-to-use.png)
@@ -110,6 +109,10 @@ Click "Select location for creating light project":
 Select this menu choice from Visual Studio Code:
 
 View->Command Palette
+
+Select the "ESP-IDF: Select OpenOCD Board Configuration":
+
+![Select OpenOCD Board Configuration](./images/select-debug-configuration.png)
 
 Note! To use the JTAG debugging connect the USB-C cable to the right USB-port on the ESP32-C6 dev kit.
 
