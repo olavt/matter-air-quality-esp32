@@ -68,6 +68,10 @@ Select the latest version of ESP-IDF and click "Install":
 
 ![ESP-IDF Installation Settings](./images/esp-idf-installation-settings.png)
 
+### Install ESP-Matter
+
+Note! Make sure you have an folder open in Visual Studio Code before installing ESP-Matter. Otherwise the installation will fail with an error about a missing workspace.
+
 Select the Espressif ESP-IDF extension in the Visual Studio Code menu, expand the Advanced section and select "Install ESP-Matter":
 
 ![ESP-IDF Setup Mode](./images/install-esp-matter.png)
