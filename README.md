@@ -174,6 +174,8 @@ idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.c6_thread" set-target esp32c6
 
 ## Add configuration for the SEN66 I2C pin configuration
 
+![ESP32-C6-DevKitC-1 Pin Layout](./images/esp32-c6-devkitc-1-pin-layout.png)
+
 Create a new text file named "Kconfig.projbuild" under the main directory.
 
 Create a new text file named "sdkconfig.defaults.c6_thread"
