@@ -127,3 +127,12 @@ Note! To use the JTAG debugging connect the USB-C cable to the right USB-port on
 ```
 idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.c6_thread" set-target esp32c6
 ```
+
+## Add Code for Air Quaility Sensor
+
+```
+    // Create Air Quality Endpoint
+    air_quality_sensor::config_t air_quality_config;
+    endpoint_t *air_quality_endpoint = air_quality_sensor::create(node, &air_quality_config, ENDPOINT_FLAG_NONE, 0);
+    ABORT_APP_ON_FAILURE(air_quality_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
+```
