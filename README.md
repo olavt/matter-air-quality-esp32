@@ -12,7 +12,7 @@ This article shows how to build a Matter Air Quality sensor with an ESP32-C6-DEV
 
 - A Mac computer as the development workstation
 - Espressif ESP32-C6-DEVKITC-1-N8 Dev Kit board
-- Sensirion SEN66 air quality 
+- Sensirion SEN66 air quality sensor
 
 ## Install prerequisites
 
