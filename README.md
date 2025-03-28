@@ -122,6 +122,8 @@ Note! To use the JTAG debugging connect the USB-C cable to the right USB-port on
 
 ## Change settings from WiFi to Thread
 
+Note! You don't need to create this file if you base your project on the "light" example, since it's already created for you.
+
 Create a new text file named "sdkconfig.defaults.c6_thread"
 
 Add the following content:
@@ -253,7 +255,7 @@ Replace the content of the sensirion_i2c_hal.c source file with this code:
 #include "sensirion_config.h"
 
 #include <esp_log.h>
-#include <driver/i2c.h>
+#include "driver/i2c_master.h"
 #include "sdkconfig.h"
 
 /*
@@ -270,6 +272,23 @@ Replace the content of the sensirion_i2c_hal.c source file with this code:
 #define I2C_MASTER_SDA_IO CONFIG_SEN66_I2C_SDA_PIN
 #define I2C_MASTER_NUM I2C_NUM_0    /*!< I2C port number for master dev */
 #define I2C_MASTER_FREQ_HZ 100000   /*!< I2C master clock frequency */
+
+i2c_master_bus_handle_t bus_handle;
+i2c_master_dev_handle_t dev_handle = NULL;
+
+i2c_master_dev_handle_t sensirion_i2c_hal_add_device(uint8_t address)
+{
+    i2c_device_config_t dev_cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = address,
+        .scl_speed_hz = 100000,
+    };
+
+    i2c_master_dev_handle_t dev_handle;
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
+
+    return dev_handle;
+}
 
 /**
  * Select the current i2c bus by index.
@@ -292,26 +311,20 @@ int16_t sensirion_i2c_hal_select_bus(uint8_t bus_idx) {
  * Initialize all hard- and software components that are needed for the I2C
  * communication.
  */
-void sensirion_i2c_hal_init(void) {
-
-    i2c_config_t i2c_conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
+void sensirion_i2c_hal_init(void)
+{
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = I2C_MASTER_NUM,
         .scl_io_num = I2C_MASTER_SCL_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master = {
-            .clk_speed = I2C_MASTER_FREQ_HZ,
-        },
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
     };
 
-    esp_err_t err = i2c_param_config(I2C_MASTER_NUM, &i2c_conf);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to configure I2C driver, err:%d", err);
-        return;
-    }
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
 
-    err = i2c_driver_install(I2C_MASTER_NUM, I2C_MODE_MASTER, 0, 0, 0);
+    ESP_LOGI(TAG, "sensirion_i2c_hal_init:  i2c_new_master_bus completed.");
 
     return;
 }
@@ -333,18 +346,15 @@ void sensirion_i2c_hal_free(void) {
  * @param count   number of bytes to read from I2C and store in the buffer
  * @returns 0 on success, error code otherwise
  */
-int8_t sensirion_i2c_hal_read(uint8_t address, uint8_t* data, uint8_t count) {
+int8_t sensirion_i2c_hal_read(uint8_t address, uint8_t* data, uint8_t count)
+{
+    if (dev_handle == NULL)
+        dev_handle = sensirion_i2c_hal_add_device(address);
 
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_READ, true /* enable_ack */);
-    i2c_master_read(cmd, data, count, I2C_MASTER_LAST_NACK);
-    i2c_master_stop(cmd);
-    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
-    i2c_cmd_link_delete(cmd);
-    cmd = NULL;
+    esp_err_t status = i2c_master_receive(dev_handle, data, count, -1);
+    ESP_ERROR_CHECK(status);
 
-    return ESP_OK;
+    return status;
 }
 
 /**
@@ -360,17 +370,13 @@ int8_t sensirion_i2c_hal_read(uint8_t address, uint8_t* data, uint8_t count) {
  */
 int8_t sensirion_i2c_hal_write(uint8_t address, const uint8_t* data, uint8_t count)
 {
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, true /* enable_ack */);
-    // Read temperature first then humidity, with clock stretching enabled
-    i2c_master_write(cmd, data, count, true);
-    i2c_master_stop(cmd);
-    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
-    i2c_cmd_link_delete(cmd);
-    cmd = NULL;
+    if (dev_handle == NULL)
+        dev_handle = sensirion_i2c_hal_add_device(address);
 
-    return ESP_OK;
+    esp_err_t status = i2c_master_transmit(dev_handle, data, count, -1);
+    ESP_ERROR_CHECK(status);
+
+    return status;
 }
 
 /**
@@ -384,14 +390,399 @@ int8_t sensirion_i2c_hal_write(uint8_t address, const uint8_t* data, uint8_t cou
 void sensirion_i2c_hal_sleep_usec(uint32_t useconds) {
     esp_rom_delay_us(useconds);
 }
-
 ```
 
-## Add Code for Air Quaility Sensor
+## Add Code for Air Quaility Sensor Clusters
+
+Add the following functions to "app_main.cpp":
 
 ```
+void AddThreadNetworkDiagnosticsCluster(node_t* node)
+{
+    endpoint_t* root_endpoint = endpoint::get(node, 0);
+
+    cluster::thread_network_diagnostics::config_t thread_network_config;
+    cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
+}
+
+void AddRelativeHumidityMeasurementCluster(endpoint_t* endpoint)
+{
+    esp_matter::cluster::relative_humidity_measurement::config_t relative_humidity_config;
+    esp_matter::cluster::relative_humidity_measurement::create(air_quality_endpoint, &relative_humidity_config, CLUSTER_FLAG_SERVER);
+}
+
+void AddTemperatureMeasurementCluster(endpoint_t* endpoint)
+{
+    // Add TemperatureMeasurement cluster
+    cluster::temperature_measurement::config_t temperature_measurement;
+    cluster::temperature_measurement::create(air_quality_endpoint, &temperature_measurement, CLUSTER_FLAG_SERVER);
+}
+
+void AddCarbonDioxideConcentrationMeasurementCluster(endpoint_t* endpoint)
+{
+    cluster::carbon_dioxide_concentration_measurement::config_t co2_measurement;
+    cluster_t* cluster = esp_matter::cluster::carbon_dioxide_concentration_measurement::create(endpoint, &co2_measurement, CLUSTER_FLAG_SERVER);
+    
+    // Add the NumericMeasurement (MEA) Feature flag    
+    cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void AddPm1ConcentrationMeasurementCluster(endpoint_t* endpoint)
+{
+    esp_matter::cluster::pm1_concentration_measurement::config_t pm1_measurement;
+    cluster_t* cluster = esp_matter::cluster::pm1_concentration_measurement::create(endpoint, &pm1_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag    
+    cluster::pm1_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::pm1_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void AddPm25ConcentrationMeasurementCluster(endpoint_t* endpoint)
+{
+    esp_matter::cluster::pm25_concentration_measurement::config_t pm25_measurement;
+    cluster_t* cluster = esp_matter::cluster::pm25_concentration_measurement::create(endpoint, &pm25_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag
+    cluster::pm25_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::pm25_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void AddPm10ConcentrationMeasurementCluster(endpoint_t* endpoint)
+{
+    esp_matter::cluster::pm10_concentration_measurement::config_t pm10_measurement;
+    cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(endpoint, &pm10_measurement, CLUSTER_FLAG_SERVER);
+
+        // Add the NumericMeasurement (MEA) Feature flag
+    cluster::pm10_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::pm10_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void AddNitrogenDioxideConcentrationMeasurementCluster(endpoint_t* endpoint)
+{
+    esp_matter::cluster::nitrogen_dioxide_concentration_measurement::config_t nox_measurement;
+    cluster_t* cluster = esp_matter::cluster::nitrogen_dioxide_concentration_measurement::create(endpoint, &nox_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag
+    cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster(endpoint_t* endpoint)
+{
+    esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::config_t voc_measurement;
+    cluster_t* cluster = esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::create(endpoint, &voc_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag
+    cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void AddAirQualityClusterFeatures(endpoint_t* endpoint)
+{
+    cluster_t *cluster = cluster::get(endpoint, AirQuality::Id);
+
+    /* Add additional features to the Air Quality cluster */
+    cluster::air_quality::feature::fair::add(cluster);
+    //cluster::air_quality::feature::mod::add(cluster);
+    //cluster::air_quality::feature::vpoor::add(cluster);
+    //cluster::air_quality::feature::xpoor::add(cluster);
+}
+```
+
+Add the following include files:
+
+```
+#include "sensirion_common.h"
+#include "SensirionSEN66.h"
+```
+
+Add this line to declare the Air Quality Endpoint variable near the top of "app_main.cpp":
+
+```
+endpoint_t *air_quality_endpoint;
+```
+
+Add this code in "" after the Extended Color Light endpoint is created:
+
+```
+    AddThreadNetworkDiagnosticsCluster(node);
+
     // Create Air Quality Endpoint
     air_quality_sensor::config_t air_quality_config;
-    endpoint_t *air_quality_endpoint = air_quality_sensor::create(node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
+    air_quality_endpoint = air_quality_sensor::create(node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
     ABORT_APP_ON_FAILURE(air_quality_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
+
+    AddAirQualityClusterFeatures(air_quality_endpoint);
+
+    // Add Air Quality Clusters
+    AddRelativeHumidityMeasurementCluster(air_quality_endpoint);
+    AddTemperatureMeasurementCluster(air_quality_endpoint);
+    AddCarbonDioxideConcentrationMeasurementCluster(air_quality_endpoint);
+    AddPm1ConcentrationMeasurementCluster(air_quality_endpoint);
+    AddPm25ConcentrationMeasurementCluster(air_quality_endpoint);
+    AddPm10ConcentrationMeasurementCluster(air_quality_endpoint);
+    AddNitrogenDioxideConcentrationMeasurementCluster(air_quality_endpoint);
+    AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster(air_quality_endpoint);
+```
+
+## Add a class for the Sensirion SEN66 Sensor
+
+Create a new "SensirionSEN66.h" file with the following code:
+
+```
+#include <stdint.h>
+
+class SensirionSEN66
+{
+public:
+
+  class MeasuredValues
+  {
+  public:
+
+    uint16_t ParticulateMatter1p0 = 0;
+    uint16_t ParticulateMatter2p5 = 0;
+    uint16_t ParticulateMatter4p0 = 0;
+    uint16_t ParticulateMatter10p0 = 0;
+    int16_t AmbientHumidity = 0;
+    int16_t AmbientTemperature = 0;
+    int16_t VOCIndex = 0;
+    int16_t NOxIndex = 0;
+    uint16_t CO2 = 0;
+  };
+
+  void Init();
+
+  int16_t ReadMeasuredValues(MeasuredValues* measuredValues);
+
+  int16_t SetSensorAltitude(uint16_t altitude);
+
+  int16_t StartContiniousMeasurement();
+
+};
+```
+
+Create a new "SensirionSEN66.cpp" file with the following code:
+
+```
+#include "SensirionSEN66.h"
+#include "drivers/sen66_i2c.h"
+#include "drivers/sensirion_common.h"
+#include "drivers/sensirion_i2c_hal.h"
+
+void SensirionSEN66::Init()
+{
+  sensirion_i2c_hal_init();
+  sen66_init(SEN66_I2C_ADDR_6B);
+}
+
+int16_t SensirionSEN66::ReadMeasuredValues(MeasuredValues* measuredValues)
+{
+  int16_t status = sen66_read_measured_values_as_integers(
+    &measuredValues->ParticulateMatter1p0,
+    &measuredValues->ParticulateMatter2p5,
+    &measuredValues->ParticulateMatter4p0,
+    &measuredValues->ParticulateMatter10p0,
+    &measuredValues->AmbientHumidity,
+    &measuredValues->AmbientTemperature,
+    &measuredValues->VOCIndex,
+    &measuredValues->NOxIndex,
+    &measuredValues->CO2);
+
+    return status;
+}
+
+int16_t SensirionSEN66::SetSensorAltitude(uint16_t altitude)
+{
+  int16_t status = sen66_set_sensor_altitude(altitude);
+  return status;
+}
+
+int16_t SensirionSEN66::StartContiniousMeasurement()
+{
+  int16_t status = sen66_start_continuous_measurement();
+
+  return status;
+}
+```
+
+## Add Code to Read Sensor
+
+Add this line to declare the Sensirion SEN66 sensor near the top of "app_main.cpp":
+
+```
+SensirionSEN66 sensirionSEN66;
+```
+
+Add the following functions:
+
+```
+void UpdateAttributeValue(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+{
+    uint16_t endpoint_id = endpoint::get_id(endpoint);
+
+    attribute_t * attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
+
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute::get_val(attribute, &val);
+    val.val.u16 = static_cast<uint16_t>(value);
+
+    attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
+void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
+{
+    uint16_t endpoint_id = endpoint::get_id(endpoint);
+
+    attribute_t * attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
+
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute::get_val(attribute, &val);
+    val.val.f = value;
+
+    attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
+void UpdateRelativeHumidity(int16_t relativeHumidity)
+{
+    uint16_t endpoint_id = endpoint::get_id(air_quality_endpoint);
+
+    attribute_t * attribute = attribute::get(endpoint_id,
+        RelativeHumidityMeasurement::Id,
+        RelativeHumidityMeasurement::Attributes::MeasuredValue::Id);
+
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute::get_val(attribute, &val);
+    val.val.u16 = static_cast<uint16_t>(relativeHumidity);
+
+    attribute::update(endpoint_id, RelativeHumidityMeasurement::Id, RelativeHumidityMeasurement::Attributes::MeasuredValue::Id, &val);
+}
+
+void UpdateAirQualityAttributes(intptr_t context)
+{
+    SensirionSEN66::MeasuredValues* measuredValues = reinterpret_cast<SensirionSEN66::MeasuredValues*>(context);
+
+    // Update the Air QUality clusters
+
+    if (measuredValues->AmbientHumidity != 0x7FFF)
+        UpdateAttributeValue(
+            air_quality_endpoint,
+            RelativeHumidityMeasurement::Id,
+            RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->AmbientHumidity);
+
+    if (measuredValues->AmbientTemperature != 0x7FFF)
+        UpdateAttributeValue(
+            air_quality_endpoint,
+            TemperatureMeasurement::Id,
+            TemperatureMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->AmbientTemperature / 2);
+
+    if (measuredValues->CO2 != 0xFFFF)
+        UpdateAttributeValueFloat(
+            air_quality_endpoint,
+            CarbonDioxideConcentrationMeasurement::Id,
+            CarbonDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->CO2);
+
+
+    if (measuredValues->ParticulateMatter1p0 != 0xFFFF)
+        UpdateAttributeValueFloat(
+            air_quality_endpoint,
+            Pm1ConcentrationMeasurement::Id,
+            Pm1ConcentrationMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->ParticulateMatter1p0 / 10);
+
+    if (measuredValues->ParticulateMatter2p5 != 0xFFFF)
+        UpdateAttributeValueFloat(
+            air_quality_endpoint,
+            Pm25ConcentrationMeasurement::Id,
+            Pm25ConcentrationMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->ParticulateMatter2p5 / 10);
+
+    if (measuredValues->ParticulateMatter10p0 != 0xFFFF)
+        UpdateAttributeValueFloat(
+            air_quality_endpoint,
+            Pm10ConcentrationMeasurement::Id,
+            Pm10ConcentrationMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->ParticulateMatter10p0 / 10);
+
+    if (measuredValues->VOCIndex != 0x7FFF)
+        UpdateAttributeValueFloat(
+            air_quality_endpoint,
+            TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
+            TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->VOCIndex / 10);
+
+    if (measuredValues->NOxIndex != 0x7FFF)
+        UpdateAttributeValueFloat(
+            air_quality_endpoint,
+            NitrogenDioxideConcentrationMeasurement::Id,
+            NitrogenDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
+            measuredValues->NOxIndex / 10);
+
+        /*
+    AirQualityEnum airQuality = classifyAirQuality(measuredValues);
+        UpdateAirQuality(airQuality);
+    */
+
+    delete measuredValues;
+}
+
+// Timer callback to measure air quality
+void measure_air_quality_timer_callback(void *arg)
+{
+    auto measuredValues = std::make_unique<SensirionSEN66::MeasuredValues>();
+    int16_t status = sensirionSEN66.ReadMeasuredValues(measuredValues.get());
+
+    ESP_LOGI(TAG, "app_main: temperature = %d", measuredValues->AmbientTemperature);
+    ESP_LOGI(TAG, "app_main: co2 = %d", measuredValues->CO2);
+
+    // Need to use ScheduleWork for thread safety
+    intptr_t context = reinterpret_cast<intptr_t>(measuredValues.release());
+    chip::DeviceLayer::PlatformMgr().ScheduleWork(UpdateAirQualityAttributes, context);
+}
+```
+
+Add code at the bottom of the app_main function to setup a periodic timer to measure air quality:
+
+```
+    // Setup periodic timer to measure air quality
+
+    esp_timer_create_args_t timer_args = {
+        .callback = &measure_air_quality_timer_callback,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK, // Run callback in a task (safer for I2C)
+        .name = "measure_air_quality_timer",
+        .skip_unhandled_events = true, // Skip if previous callback is still running
+    };
+
+    esp_timer_handle_t timer_handle;
+    err = esp_timer_create(&timer_args, &timer_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create timer: %s", esp_err_to_name(err));
+        return;
+    }
+
+    // Start the timer to trigger every 60 seconds (1 minute)
+    err = esp_timer_start_periodic(timer_handle, 60 * 1000000ULL); // 60 seconds in microseconds
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start timer: %s", esp_err_to_name(err));
+    }
+    ESP_LOGI(TAG, "Air quality timer started");
+```
+
+## Enable Clusters
+
+Edit "sdkconfig.defaults" and make sure all the clusters added above are enabled:
+
+```
+CONFIG_SUPPORT_AIR_QUALITY_CLUSTER=y
+CONFIG_SUPPORT_CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT_CLUSTER=y
+CONFIG_SUPPORT_NITROGEN_DIOXIDE_CONCENTRATION_MEASUREMENT_CLUSTER=y
+CONFIG_SUPPORT_PM10_CONCENTRATION_MEASUREMENT_CLUSTER=y
+CONFIG_SUPPORT_PM1_CONCENTRATION_MEASUREMENT_CLUSTER=y
+CONFIG_SUPPORT_PM2_5_CONCENTRATION_MEASUREMENT_CLUSTER=y
+CONFIG_SUPPORT_TVOC_CONCENTRATION_MEASUREMENT_CLUSTER=y
 ```
