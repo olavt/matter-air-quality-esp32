@@ -172,9 +172,26 @@ CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.c6_thread" set-target esp32c6
 ```
 
-## Add configuration for the SEN66 I2C pin configuration
+## Connect the hardware
+
+![SEN66 pin assignment](./images/sen66-pin-assignment.png)
+
+The recommended voltage is 3.3V.
 
 ![ESP32-C6-DevKitC-1 Pin Layout](./images/esp32-c6-devkitc-1-pin-layout.png)
+
+## Connecting the SEN66 sensor
+
+- Connecting the SEN66 air quality sensor
+
+| ESP32-C6 Pin | SEN66 Pin |
+|--------------|-----------|
+| GND          | GND       |
+| 3V3          | VCC       |
+| GPIO 6       | SDA       |
+| GPIO 7       | SCL       |
+
+## Add configuration for the SEN66 I2C pin configuration
 
 Create a new text file named "Kconfig.projbuild" under the main directory.
 
