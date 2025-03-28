@@ -160,6 +160,9 @@ CONFIG_ENABLE_EXTENDED_DISCOVERY=y
 
 # Disable STA for ESP32C6
 CONFIG_ENABLE_WIFI_STATION=n
+
+# Enable HKDF in mbedtls
+CONFIG_MBEDTLS_HKDF_C=y
 ```
 
 ![Open ESP-IDF Terminal](./images/open-esp-idf-terminal.png)
