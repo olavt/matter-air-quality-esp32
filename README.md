@@ -64,7 +64,7 @@ Select the Express Setup Mode
 
 ![ESP-IDF Setup Mode](./images/esp-idf-setup-mode.png)
 
-Select the latest version of ESP-IDF and click "Install":
+Select version of ESP-IDF that is recommended here https://github.com/espressif/esp-matter and click "Install":
 
 ![ESP-IDF Installation Settings](./images/esp-idf-installation-settings.png)
 
