@@ -177,6 +177,26 @@ CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.c6_thread" set-target esp32c6
 ```
 
+## Add Thread Networking Diagnostics Cluster
+
+Add this function to "app_main.cpp":
+
+```
+void AddThreadNetworkDiagnosticsCluster(node_t* node)
+{
+    endpoint_t* root_endpoint = endpoint::get(node, 0);
+
+    cluster::thread_network_diagnostics::config_t thread_network_config;
+    cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
+}
+```
+
+Add a call to it below the code that creates the Node:
+
+```
+    AddThreadNetworkDiagnosticsCluster(node);
+```
+
 ## Connect the hardware
 
 ![SEN66 pin assignment](./images/sen66-pin-assignment.png)
