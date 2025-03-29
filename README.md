@@ -191,10 +191,15 @@ void AddThreadNetworkDiagnosticsCluster(node_t* node)
 }
 ```
 
-Add a call to it below the code that creates the Node:
+Add a call to it below the code that creates the Node.
+
+You should place it in a section that is only active when Thread is enabled as shown below:
 
 ```
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+...
     AddThreadNetworkDiagnosticsCluster(node);
+...
 ```
 
 ## Connect the hardware
