@@ -198,7 +198,7 @@ The recommended voltage is 3.3V.
 
 ## Add configuration for the SEN66 I2C pin configuration
 
-Create a new text file named "Kconfig.projbuild" under the main directory.
+Create a new text file named "Kconfig.projbuild" under the "main" directory.
 
 Add the following content:
 
@@ -236,7 +236,7 @@ https://github.com/Sensirion/embedded-i2c-sen66
 
 Create a new directory under "main" named "drivers".
 
-Update the "CMakeLists.txt" file to include the "drivers" subdirectory like this:
+Update the "CMakeLists.txt" file (in the "main" directory) to include the "drivers" subdirectory like this:
 
 ```
 idf_component_register(SRC_DIRS          "." "drivers"
@@ -390,143 +390,9 @@ void sensirion_i2c_hal_sleep_usec(uint32_t useconds) {
 }
 ```
 
-## Add Code for Air Quaility Sensor Clusters
-
-Add the following functions to "app_main.cpp":
-
-```
-void AddThreadNetworkDiagnosticsCluster(node_t* node)
-{
-    endpoint_t* root_endpoint = endpoint::get(node, 0);
-
-    cluster::thread_network_diagnostics::config_t thread_network_config;
-    cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
-}
-
-void AddRelativeHumidityMeasurementCluster(endpoint_t* endpoint)
-{
-    esp_matter::cluster::relative_humidity_measurement::config_t relative_humidity_config;
-    esp_matter::cluster::relative_humidity_measurement::create(air_quality_endpoint, &relative_humidity_config, CLUSTER_FLAG_SERVER);
-}
-
-void AddTemperatureMeasurementCluster(endpoint_t* endpoint)
-{
-    // Add TemperatureMeasurement cluster
-    cluster::temperature_measurement::config_t temperature_measurement;
-    cluster::temperature_measurement::create(air_quality_endpoint, &temperature_measurement, CLUSTER_FLAG_SERVER);
-}
-
-void AddCarbonDioxideConcentrationMeasurementCluster(endpoint_t* endpoint)
-{
-    cluster::carbon_dioxide_concentration_measurement::config_t co2_measurement;
-    cluster_t* cluster = esp_matter::cluster::carbon_dioxide_concentration_measurement::create(endpoint, &co2_measurement, CLUSTER_FLAG_SERVER);
-    
-    // Add the NumericMeasurement (MEA) Feature flag    
-    cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
-    cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
-}
-
-void AddPm1ConcentrationMeasurementCluster(endpoint_t* endpoint)
-{
-    esp_matter::cluster::pm1_concentration_measurement::config_t pm1_measurement;
-    cluster_t* cluster = esp_matter::cluster::pm1_concentration_measurement::create(endpoint, &pm1_measurement, CLUSTER_FLAG_SERVER);
-
-    // Add the NumericMeasurement (MEA) Feature flag    
-    cluster::pm1_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
-    cluster::pm1_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
-}
-
-void AddPm25ConcentrationMeasurementCluster(endpoint_t* endpoint)
-{
-    esp_matter::cluster::pm25_concentration_measurement::config_t pm25_measurement;
-    cluster_t* cluster = esp_matter::cluster::pm25_concentration_measurement::create(endpoint, &pm25_measurement, CLUSTER_FLAG_SERVER);
-
-    // Add the NumericMeasurement (MEA) Feature flag
-    cluster::pm25_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
-    cluster::pm25_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
-}
-
-void AddPm10ConcentrationMeasurementCluster(endpoint_t* endpoint)
-{
-    esp_matter::cluster::pm10_concentration_measurement::config_t pm10_measurement;
-    cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(endpoint, &pm10_measurement, CLUSTER_FLAG_SERVER);
-
-        // Add the NumericMeasurement (MEA) Feature flag
-    cluster::pm10_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
-    cluster::pm10_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
-}
-
-void AddNitrogenDioxideConcentrationMeasurementCluster(endpoint_t* endpoint)
-{
-    esp_matter::cluster::nitrogen_dioxide_concentration_measurement::config_t nox_measurement;
-    cluster_t* cluster = esp_matter::cluster::nitrogen_dioxide_concentration_measurement::create(endpoint, &nox_measurement, CLUSTER_FLAG_SERVER);
-
-    // Add the NumericMeasurement (MEA) Feature flag
-    cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
-    cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
-}
-
-void AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster(endpoint_t* endpoint)
-{
-    esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::config_t voc_measurement;
-    cluster_t* cluster = esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::create(endpoint, &voc_measurement, CLUSTER_FLAG_SERVER);
-
-    // Add the NumericMeasurement (MEA) Feature flag
-    cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
-    cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
-}
-
-void AddAirQualityClusterFeatures(endpoint_t* endpoint)
-{
-    cluster_t *cluster = cluster::get(endpoint, AirQuality::Id);
-
-    /* Add additional features to the Air Quality cluster */
-    cluster::air_quality::feature::fair::add(cluster);
-    //cluster::air_quality::feature::mod::add(cluster);
-    //cluster::air_quality::feature::vpoor::add(cluster);
-    //cluster::air_quality::feature::xpoor::add(cluster);
-}
-```
-
-Add the following include files:
-
-```
-#include "sensirion_common.h"
-#include "SensirionSEN66.h"
-```
-
-Add this line to declare the Air Quality Endpoint variable near the top of "app_main.cpp":
-
-```
-endpoint_t *air_quality_endpoint;
-```
-
-Add this code in "" after the Extended Color Light endpoint is created:
-
-```
-    AddThreadNetworkDiagnosticsCluster(node);
-
-    // Create Air Quality Endpoint
-    air_quality_sensor::config_t air_quality_config;
-    air_quality_endpoint = air_quality_sensor::create(node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
-    ABORT_APP_ON_FAILURE(air_quality_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
-
-    AddAirQualityClusterFeatures(air_quality_endpoint);
-
-    // Add Air Quality Clusters
-    AddRelativeHumidityMeasurementCluster(air_quality_endpoint);
-    AddTemperatureMeasurementCluster(air_quality_endpoint);
-    AddCarbonDioxideConcentrationMeasurementCluster(air_quality_endpoint);
-    AddPm1ConcentrationMeasurementCluster(air_quality_endpoint);
-    AddPm25ConcentrationMeasurementCluster(air_quality_endpoint);
-    AddPm10ConcentrationMeasurementCluster(air_quality_endpoint);
-    AddNitrogenDioxideConcentrationMeasurementCluster(air_quality_endpoint);
-    AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster(air_quality_endpoint);
-```
-
 ## Add a class for the Sensirion SEN66 Sensor
 
-Create a new "SensirionSEN66.h" file with the following code:
+Create a new "SensirionSEN66.h" file in the "main" folder with the following code:
 
 ```
 #include <stdint.h>
@@ -605,18 +471,217 @@ int16_t SensirionSEN66::StartContiniousMeasurement()
 }
 ```
 
-## Add Code to Read Sensor
+## Add Code for Matter Air Quaility Sensor Clusters
 
-Add this line to declare the Sensirion SEN66 sensor near the top of "app_main.cpp":
-
-```
-SensirionSEN66 sensirionSEN66;
-```
-
-Add the following functions:
+Create a new "MatterAirQuality.h" file in the "main" folder with the following code:
 
 ```
-void UpdateAttributeValue(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+#pragma once
+
+#include <esp_matter.h>
+
+#include "SensirionSEN66.h"
+
+using namespace esp_matter;
+using namespace esp_matter::endpoint;
+
+class MatterAirQuality
+{
+    public:
+
+        void CreateEndpoint(node_t* node);
+        
+        void StartMeasurements();
+
+    private:
+
+        SensirionSEN66 m_sensirionSEN66;
+        endpoint_t* m_airQualityEndpoint;
+        esp_timer_handle_t m_timer_handle;
+
+        void AddRelativeHumidityMeasurementCluster();
+
+        void AddTemperatureMeasurementCluster();
+
+        void AddCarbonDioxideConcentrationMeasurementCluster();
+
+        void AddPm1ConcentrationMeasurementCluster();
+
+        void AddPm25ConcentrationMeasurementCluster();
+
+        void AddPm10ConcentrationMeasurementCluster();
+
+        void AddNitrogenDioxideConcentrationMeasurementCluster();
+
+        void AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
+
+        void AddAirQualityClusterFeatures();
+
+        void static UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value);
+
+        void static UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value);
+
+        void static UpdateAirQualityAttributes(endpoint_t* endpoint, SensirionSEN66::MeasuredValues* measuredValues);
+
+        void static MeasureAirQualityTimerCallback(void *arg);
+
+};
+```
+
+Create a new "MatterAirQuality.cpp" file in the "main" folder with the following code:
+
+```
+#include "MatterAirQuality.h"
+
+#include <esp_err.h>
+#include <esp_log.h>
+#include <common_macros.h>
+
+#include "sensirion_common.h"
+
+using namespace esp_matter::attribute;
+using namespace chip::app::Clusters;
+
+static const char *TAG = "MatterAirQuality";
+
+void MatterAirQuality::CreateEndpoint(node_t* node)
+{
+    // Create Air Quality Endpoint
+    air_quality_sensor::config_t air_quality_config;
+    m_airQualityEndpoint = air_quality_sensor::create(node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
+    ABORT_APP_ON_FAILURE(m_airQualityEndpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
+
+    AddAirQualityClusterFeatures();
+
+    // Add Air Quality Clusters
+    AddRelativeHumidityMeasurementCluster();
+    AddTemperatureMeasurementCluster();
+    AddCarbonDioxideConcentrationMeasurementCluster();
+    AddPm1ConcentrationMeasurementCluster();
+    AddPm25ConcentrationMeasurementCluster();
+    AddPm10ConcentrationMeasurementCluster();
+    AddNitrogenDioxideConcentrationMeasurementCluster();
+    AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
+
+    // Initialize Air Quality Sensor
+    m_sensirionSEN66.Init();
+    m_sensirionSEN66.SetSensorAltitude(25);
+}
+
+void MatterAirQuality::StartMeasurements()
+{
+    int16_t status = m_sensirionSEN66.StartContiniousMeasurement();
+    ABORT_APP_ON_FAILURE(status == NO_ERROR, ESP_LOGE(TAG, "SEN66 StartContiniousMeasurement failed."));
+
+        // Setup periodic timer to measure air quality
+
+        esp_timer_create_args_t timer_args = {
+            .callback = &MeasureAirQualityTimerCallback,
+            .arg = this,
+            .dispatch_method = ESP_TIMER_TASK, // Run callback in a task (safer for I2C)
+            .name = "measure_air_quality_timer",
+            .skip_unhandled_events = true, // Skip if previous callback is still running
+        };
+    
+        esp_err_t err = esp_timer_create(&timer_args, &m_timer_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to create timer: %s", esp_err_to_name(err));
+            return;
+        }
+    
+        // Start the timer to trigger every 60 seconds (1 minute)
+        err = esp_timer_start_periodic(m_timer_handle, 60 * 1000000ULL); // 60 seconds in microseconds
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to start timer: %s", esp_err_to_name(err));
+        }
+        ESP_LOGI(TAG, "Air quality timer started");
+}
+
+void MatterAirQuality::AddRelativeHumidityMeasurementCluster()
+{
+    esp_matter::cluster::relative_humidity_measurement::config_t relative_humidity_config;
+    esp_matter::cluster::relative_humidity_measurement::create(m_airQualityEndpoint, &relative_humidity_config, CLUSTER_FLAG_SERVER);
+}
+
+void MatterAirQuality::AddTemperatureMeasurementCluster()
+{
+    // Add TemperatureMeasurement cluster
+    cluster::temperature_measurement::config_t temperature_measurement;
+    cluster::temperature_measurement::create(m_airQualityEndpoint, &temperature_measurement, CLUSTER_FLAG_SERVER);
+}
+
+void MatterAirQuality::AddCarbonDioxideConcentrationMeasurementCluster()
+{
+    cluster::carbon_dioxide_concentration_measurement::config_t co2_measurement;
+    cluster_t* cluster = esp_matter::cluster::carbon_dioxide_concentration_measurement::create(m_airQualityEndpoint, &co2_measurement, CLUSTER_FLAG_SERVER);
+    
+    // Add the NumericMeasurement (MEA) Feature flag    
+    cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
+{
+    esp_matter::cluster::pm1_concentration_measurement::config_t pm1_measurement;
+    cluster_t* cluster = esp_matter::cluster::pm1_concentration_measurement::create(m_airQualityEndpoint, &pm1_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag    
+    cluster::pm1_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::pm1_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
+{
+    esp_matter::cluster::pm25_concentration_measurement::config_t pm25_measurement;
+    cluster_t* cluster = esp_matter::cluster::pm25_concentration_measurement::create(m_airQualityEndpoint, &pm25_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag
+    cluster::pm25_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::pm25_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
+{
+    esp_matter::cluster::pm10_concentration_measurement::config_t pm10_measurement;
+    cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(m_airQualityEndpoint, &pm10_measurement, CLUSTER_FLAG_SERVER);
+
+        // Add the NumericMeasurement (MEA) Feature flag
+    cluster::pm10_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::pm10_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
+{
+    esp_matter::cluster::nitrogen_dioxide_concentration_measurement::config_t nox_measurement;
+    cluster_t* cluster = esp_matter::cluster::nitrogen_dioxide_concentration_measurement::create(m_airQualityEndpoint, &nox_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag
+    cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void MatterAirQuality::AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster()
+{
+    esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::config_t voc_measurement;
+    cluster_t* cluster = esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::create(m_airQualityEndpoint, &voc_measurement, CLUSTER_FLAG_SERVER);
+
+    // Add the NumericMeasurement (MEA) Feature flag
+    cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
+    cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+}
+
+void MatterAirQuality::AddAirQualityClusterFeatures()
+{
+    cluster_t *cluster = cluster::get(m_airQualityEndpoint, AirQuality::Id);
+
+    /* Add additional features to the Air Quality cluster */
+    cluster::air_quality::feature::fair::add(cluster);
+    //cluster::air_quality::feature::mod::add(cluster);
+    //cluster::air_quality::feature::vpoor::add(cluster);
+    //cluster::air_quality::feature::xpoor::add(cluster);
+}
+
+void MatterAirQuality::UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
 {
     uint16_t endpoint_id = endpoint::get_id(endpoint);
 
@@ -629,7 +694,7 @@ void UpdateAttributeValue(endpoint_t* endpoint, uint32_t cluster_id, uint32_t at
     attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
+void MatterAirQuality::UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
 {
     uint16_t endpoint_id = endpoint::get_id(endpoint);
 
@@ -642,80 +707,62 @@ void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32
     attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-void UpdateRelativeHumidity(int16_t relativeHumidity)
+void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* endpoint, SensirionSEN66::MeasuredValues* measuredValues)
 {
-    uint16_t endpoint_id = endpoint::get_id(air_quality_endpoint);
-
-    attribute_t * attribute = attribute::get(endpoint_id,
-        RelativeHumidityMeasurement::Id,
-        RelativeHumidityMeasurement::Attributes::MeasuredValue::Id);
-
-    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
-    attribute::get_val(attribute, &val);
-    val.val.u16 = static_cast<uint16_t>(relativeHumidity);
-
-    attribute::update(endpoint_id, RelativeHumidityMeasurement::Id, RelativeHumidityMeasurement::Attributes::MeasuredValue::Id, &val);
-}
-
-void UpdateAirQualityAttributes(intptr_t context)
-{
-    SensirionSEN66::MeasuredValues* measuredValues = reinterpret_cast<SensirionSEN66::MeasuredValues*>(context);
-
     // Update the Air QUality clusters
 
     if (measuredValues->AmbientHumidity != 0x7FFF)
-        UpdateAttributeValue(
-            air_quality_endpoint,
+        UpdateAttributeValueInt16(
+            endpoint,
             RelativeHumidityMeasurement::Id,
             RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->AmbientHumidity);
 
     if (measuredValues->AmbientTemperature != 0x7FFF)
-        UpdateAttributeValue(
-            air_quality_endpoint,
+        UpdateAttributeValueInt16(
+            endpoint,
             TemperatureMeasurement::Id,
             TemperatureMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->AmbientTemperature / 2);
 
     if (measuredValues->CO2 != 0xFFFF)
         UpdateAttributeValueFloat(
-            air_quality_endpoint,
+            endpoint,
             CarbonDioxideConcentrationMeasurement::Id,
             CarbonDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->CO2);
 
-
     if (measuredValues->ParticulateMatter1p0 != 0xFFFF)
         UpdateAttributeValueFloat(
-            air_quality_endpoint,
+            endpoint,
             Pm1ConcentrationMeasurement::Id,
             Pm1ConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->ParticulateMatter1p0 / 10);
 
     if (measuredValues->ParticulateMatter2p5 != 0xFFFF)
         UpdateAttributeValueFloat(
-            air_quality_endpoint,
+            endpoint,
             Pm25ConcentrationMeasurement::Id,
             Pm25ConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->ParticulateMatter2p5 / 10);
 
     if (measuredValues->ParticulateMatter10p0 != 0xFFFF)
         UpdateAttributeValueFloat(
-            air_quality_endpoint,
+            endpoint,
             Pm10ConcentrationMeasurement::Id,
             Pm10ConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->ParticulateMatter10p0 / 10);
 
     if (measuredValues->VOCIndex != 0x7FFF)
         UpdateAttributeValueFloat(
-            air_quality_endpoint,
+            endpoint,
             TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
             TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->VOCIndex / 10);
 
     if (measuredValues->NOxIndex != 0x7FFF)
         UpdateAttributeValueFloat(
-            air_quality_endpoint,
+            endpoint,
             NitrogenDioxideConcentrationMeasurement::Id,
             NitrogenDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->NOxIndex / 10);
@@ -725,50 +772,52 @@ void UpdateAirQualityAttributes(intptr_t context)
         UpdateAirQuality(airQuality);
     */
 
-    delete measuredValues;
 }
 
 // Timer callback to measure air quality
-void measure_air_quality_timer_callback(void *arg)
+void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
 {
-    auto measuredValues = std::make_unique<SensirionSEN66::MeasuredValues>();
-    int16_t status = sensirionSEN66.ReadMeasuredValues(measuredValues.get());
+    MatterAirQuality* airQuality = static_cast<MatterAirQuality*>(arg);
+
+    endpoint_t* endpoint = airQuality->m_airQualityEndpoint;
+    SensirionSEN66* sensor = &airQuality->m_sensirionSEN66;
+
+    SensirionSEN66::MeasuredValues* measuredValues = new SensirionSEN66::MeasuredValues();
+
+    int16_t status = sensor->ReadMeasuredValues(measuredValues);
 
     ESP_LOGI(TAG, "app_main: temperature = %d", measuredValues->AmbientTemperature);
     ESP_LOGI(TAG, "app_main: co2 = %d", measuredValues->CO2);
 
-    // Need to use ScheduleWork for thread safety
-    intptr_t context = reinterpret_cast<intptr_t>(measuredValues.release());
-    chip::DeviceLayer::PlatformMgr().ScheduleWork(UpdateAirQualityAttributes, context);
+    // Need to use Schedule work on Matter thread for thread safety
+    chip::DeviceLayer::SystemLayer().ScheduleLambda([endpoint, measuredValues]
+        {
+            MatterAirQuality::UpdateAirQualityAttributes(endpoint, measuredValues);
+            delete measuredValues;           
+        }
+    );
 }
 ```
 
-Add code at the bottom of the app_main function to setup a periodic timer to measure air quality:
+## Add Code to use Matter Air Quality
+
+Add this include file to "app_main.cpp":
 
 ```
-    // Setup periodic timer to measure air quality
+#include "MatterAirQuality.h"
+```
 
-    esp_timer_create_args_t timer_args = {
-        .callback = &measure_air_quality_timer_callback,
-        .arg = NULL,
-        .dispatch_method = ESP_TIMER_TASK, // Run callback in a task (safer for I2C)
-        .name = "measure_air_quality_timer",
-        .skip_unhandled_events = true, // Skip if previous callback is still running
-    };
+Declare the variable:
 
-    esp_timer_handle_t timer_handle;
-    err = esp_timer_create(&timer_args, &timer_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to create timer: %s", esp_err_to_name(err));
-        return;
-    }
+```
+MatterAirQuality matterAirQuality;
+```
 
-    // Start the timer to trigger every 60 seconds (1 minute)
-    err = esp_timer_start_periodic(timer_handle, 60 * 1000000ULL); // 60 seconds in microseconds
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start timer: %s", esp_err_to_name(err));
-    }
-    ESP_LOGI(TAG, "Air quality timer started");
+Add this code to "app_main.cpp" after the endpoints in the existing code have been added:
+
+```
+    matterAirQuality.CreateEndpoint(node);
+    matterAirQuality.StartMeasurements();
 ```
 
 ## Enable Clusters
@@ -784,3 +833,5 @@ CONFIG_SUPPORT_PM1_CONCENTRATION_MEASUREMENT_CLUSTER=y
 CONFIG_SUPPORT_PM2_5_CONCENTRATION_MEASUREMENT_CLUSTER=y
 CONFIG_SUPPORT_TVOC_CONCENTRATION_MEASUREMENT_CLUSTER=y
 ```
+
+## Build and Flash your project
