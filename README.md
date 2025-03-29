@@ -566,6 +566,7 @@ Create a new "MatterAirQuality.cpp" file in the "main" folder with the following
 
 using namespace esp_matter::attribute;
 using namespace chip::app::Clusters;
+using namespace chip::app::Clusters::AirQuality;
 
 static const char *TAG = "MatterAirQuality";
 
@@ -708,28 +709,44 @@ void MatterAirQuality::AddAirQualityClusterFeatures()
 
 void MatterAirQuality::UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
 {
-    uint16_t endpoint_id = endpoint::get_id(endpoint);
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
 
-    attribute_t * attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
+    attribute_t* attribute = esp_matter::attribute::get(endpoint_id, cluster_id, attribute_id);
 
-    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
-    attribute::get_val(attribute, &val);
-    val.val.u16 = static_cast<uint16_t>(value);
+    esp_matter_attr_val_t val = esp_matter_int16(value);
 
-    attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
 void MatterAirQuality::UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
 {
-    uint16_t endpoint_id = endpoint::get_id(endpoint);
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
 
-    attribute_t * attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
+    attribute_t * attribute = esp_matter::attribute::get(endpoint_id, cluster_id, attribute_id);
 
-    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
-    attribute::get_val(attribute, &val);
-    val.val.f = value;
+    esp_matter_attr_val_t val = esp_matter_float(value);
 
-    attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
+AirQualityEnum classifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
+{
+    uint16_t co2Value = measuredValues->CO2;
+
+    if (co2Value < 380)
+        return AirQuality::AirQualityEnum::kUnknown;
+    else if (co2Value < 500)
+        return AirQualityEnum::kGood;
+    else if (co2Value < 700)
+        return AirQualityEnum::kFair;
+    else if (co2Value < 800)
+        return AirQualityEnum::kModerate;
+    else if (co2Value < 900)
+        return AirQualityEnum::kPoor;
+    else if (co2Value < 1000)
+        return AirQualityEnum::kVeryPoor;
+    else
+        return AirQualityEnum::kExtremelyPoor;
 }
 
 void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* endpoint, SensirionSEN66::MeasuredValues* measuredValues)
@@ -792,10 +809,15 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* endpoint, Sensirio
             NitrogenDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->NOxIndex / 10);
 
-        /*
     AirQualityEnum airQuality = classifyAirQuality(measuredValues);
-        UpdateAirQuality(airQuality);
-    */
+    
+    UpdateAttributeValueInt16(
+        endpoint,
+        AirQuality::Id,
+        AirQuality::Attributes::AirQuality::Id,
+        static_cast<int16_t>(airQuality)
+
+);
 
 }
 
