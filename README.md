@@ -200,8 +200,6 @@ The recommended voltage is 3.3V.
 
 Create a new text file named "Kconfig.projbuild" under the main directory.
 
-Create a new text file named "sdkconfig.defaults.c6_thread"
-
 Add the following content:
 
 ```
