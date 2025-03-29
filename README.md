@@ -199,7 +199,7 @@ You should place it in a section that is only active when Thread is enabled as s
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 ...
     AddThreadNetworkDiagnosticsCluster(node);
-...
+#endif
 ```
 
 ## Connect the hardware
