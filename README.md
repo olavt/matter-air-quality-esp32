@@ -997,7 +997,7 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
     ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: temperature=%d", measuredValues->AmbientTemperature);
     ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: co2=%d", measuredValues->CO2);
 
-    // Need to use Schedule work on Matter thread for thread safety
+    // Need to use ScheduleLambda to execute the updates to the clusters on the Matter thread for thread safety
     chip::DeviceLayer::SystemLayer().ScheduleLambda(
         [
             airQualityEndpoint = airQuality->m_airQualityEndpoint,
