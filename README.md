@@ -558,6 +558,7 @@ Create a new "MatterAirQuality.cpp" file in the "main" folder with the following
 #include <esp_err.h>
 #include <esp_log.h>
 #include <common_macros.h>
+#include <math.h>
 
 #include "sensirion_common.h"
 
@@ -822,14 +823,18 @@ static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id,
 
 static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint8_t saturation)
 {
-    // Update Hue (0–254, maps to 0°–360°)
+    // Hue represents the color. It ranges from 0 to 360 degrees.
+    // 0 degrees = Red
+    // 120 degrees = Green
+    // 240 degrees = Blue
+    // In matter it's representet as a byte with the range 0 to 255.
+
     UpdateAttributeValueUInt8(
         colorControlEndpoint,
         ColorControl::Id,
         ColorControl::Attributes::CurrentHue::Id,
         hue);
 
-    // Update Saturation (0–254, maps to 0%–100%)
     UpdateAttributeValueUInt8(
         colorControlEndpoint,
         ColorControl::Id,
@@ -839,29 +844,41 @@ static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint
     ESP_LOGI(TAG, "SetLightColorHSV: CurrentHue=%d CurrentSaturation=%d" , hue, saturation);     
 }
 
+static uint8_t HueDegreesToUInt8(float degrees)
+{
+    // Wrap degrees to 0-360 using modulo
+    float wrapped = fmodf(degrees, 360.0f);
+
+    // Scale to 0-256 and round
+    float scaled = (wrapped / 360.0f) * 256.0f;
+
+    // Cast to uint8_t, letting 256 overflow to 0
+    return (uint8_t)(scaled + 0.5f);    
+}
+
 static void SetLightColorByAirQuality(endpoint_t* colorControlEndpoint, AirQualityEnum airQuality)
 {
-    uint8_t saturation = 254; // Full saturation for vivid colors
+    uint8_t saturation = 255; // Full saturation for vivid colors
     uint8_t hue = 0;
 
     switch (airQuality) {
         case AirQuality::AirQualityEnum::kGood:
-            hue = 85; // Green (~120°: 120/360 * 254 ≈ 85)
+            hue = HueDegreesToUInt8(120.0); // Green
             break;
         case AirQuality::AirQualityEnum::kFair:
-            hue = 70; // Green-yellow (~100°)
+            hue = HueDegreesToUInt8(100.0); // Green-yellow
             break;
         case AirQuality::AirQualityEnum::kModerate:
-            hue = 55; // Yellow-green (~80°)
+            hue = HueDegreesToUInt8(80.0);  // Yellow-green (~80°)
             break;
         case AirQuality::AirQualityEnum::kPoor:
-            hue = 42; // Yellow (~60°: 60/360 * 254 ≈ 42)
+            hue = HueDegreesToUInt8(60.0);  // Yellow
             break;
         case AirQuality::AirQualityEnum::kVeryPoor:
-            hue = 21; // Orange (~30°)
+            hue = HueDegreesToUInt8(30.0);  // Orange
             break;
         case AirQuality::AirQualityEnum::kExtremelyPoor:
-            hue = 0;  // Red (0°)
+            hue = HueDegreesToUInt8(0.0);   // Red
             break;
         case AirQuality::AirQualityEnum::kUnknown:
             hue = 0;  // Neutral (could also reduce saturation)
