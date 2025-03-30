@@ -514,14 +514,17 @@ class MatterAirQuality
 {
     public:
 
-        void CreateEndpoint(node_t* node);
+        MatterAirQuality(endpoint_t* colorControlEndpoint);
+
+        void CreateAirQualityEndpoint(node_t* node);
         
         void StartMeasurements();
 
     private:
 
-        SensirionSEN66 m_sensirionSEN66;
+        endpoint_t* m_colorControlEndpoint;
         endpoint_t* m_airQualityEndpoint;
+        SensirionSEN66 m_sensirionSEN66;
         esp_timer_handle_t m_timer_handle;
 
         void AddRelativeHumidityMeasurementCluster();
@@ -541,12 +544,6 @@ class MatterAirQuality
         void AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
 
         void AddAirQualityClusterFeatures();
-
-        void static UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value);
-
-        void static UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value);
-
-        void static UpdateAirQualityAttributes(endpoint_t* endpoint, SensirionSEN66::MeasuredValues* measuredValues);
 
         void static MeasureAirQualityTimerCallback(void *arg);
 
@@ -570,7 +567,12 @@ using namespace chip::app::Clusters::AirQuality;
 
 static const char *TAG = "MatterAirQuality";
 
-void MatterAirQuality::CreateEndpoint(node_t* node)
+MatterAirQuality::MatterAirQuality(endpoint_t* colorControlEndpoint)
+{
+    m_colorControlEndpoint = colorControlEndpoint;
+}
+
+void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
 {
     // Create Air Quality Endpoint
     air_quality_sensor::config_t air_quality_config;
@@ -579,7 +581,7 @@ void MatterAirQuality::CreateEndpoint(node_t* node)
 
     AddAirQualityClusterFeatures();
 
-    // Add Air Quality Clusters
+    // Add Concentration Measurement Clusters
     AddRelativeHumidityMeasurementCluster();
     AddTemperatureMeasurementCluster();
     AddCarbonDioxideConcentrationMeasurementCluster();
@@ -707,29 +709,88 @@ void MatterAirQuality::AddAirQualityClusterFeatures()
     //cluster::air_quality::feature::xpoor::add(cluster);
 }
 
-void MatterAirQuality::UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+void static UpdateAttributeValueUInt8(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint8_t value)
 {
     uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
 
-    attribute_t* attribute = esp_matter::attribute::get(endpoint_id, cluster_id, attribute_id);
+    esp_matter_attr_val_t val = esp_matter_uint8(value);
+
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
+static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+{
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
 
     esp_matter_attr_val_t val = esp_matter_int16(value);
 
     esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-void MatterAirQuality::UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
+static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
 {
     uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    attribute_t * attribute = esp_matter::attribute::get(endpoint_id, cluster_id, attribute_id);
 
     esp_matter_attr_val_t val = esp_matter_float(value);
 
     esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-AirQualityEnum classifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
+
+static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint8_t saturation)
+{
+    // Update Hue (0–254, maps to 0°–360°)
+    UpdateAttributeValueUInt8(
+        colorControlEndpoint,
+        ColorControl::Id,
+        ColorControl::Attributes::CurrentHue::Id,
+        hue);
+
+    // Update Saturation (0–254, maps to 0%–100%)
+    UpdateAttributeValueUInt8(
+        colorControlEndpoint,
+        ColorControl::Id,
+        ColorControl::Attributes::CurrentSaturation::Id,
+        saturation);
+}
+
+static void SetLightColorByAirQuality(endpoint_t* colorControlEndpoint, AirQualityEnum airQuality)
+{
+    uint8_t saturation = 254; // Full saturation for vivid colors
+    uint8_t hue = 0;
+
+    switch (airQuality) {
+        case AirQuality::AirQualityEnum::kGood:
+            hue = 85; // Green (~120°: 120/360 * 254 ≈ 85)
+            break;
+        case AirQuality::AirQualityEnum::kFair:
+            hue = 70; // Green-yellow (~100°)
+            break;
+        case AirQuality::AirQualityEnum::kModerate:
+            hue = 55; // Yellow-green (~80°)
+            break;
+        case AirQuality::AirQualityEnum::kPoor:
+            hue = 42; // Yellow (~60°: 60/360 * 254 ≈ 42)
+            break;
+        case AirQuality::AirQualityEnum::kVeryPoor:
+            hue = 21; // Orange (~30°)
+            break;
+        case AirQuality::AirQualityEnum::kExtremelyPoor:
+            hue = 0;  // Red (0°)
+            break;
+        case AirQuality::AirQualityEnum::kUnknown:
+            hue = 0;  // Neutral (could also reduce saturation)
+            saturation = 0; // White/off
+            break;
+        default:
+            ESP_LOGE(TAG, "Unknown air quality enum value");
+            return;
+    }
+    
+    SetLightColorHSV(colorControlEndpoint, hue, saturation);    
+}
+
+AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
 {
     uint16_t co2Value = measuredValues->CO2;
 
@@ -749,76 +810,75 @@ AirQualityEnum classifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues
         return AirQualityEnum::kExtremelyPoor;
 }
 
-void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* endpoint, SensirionSEN66::MeasuredValues* measuredValues)
+static void UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_t* colorControlEndpoint, SensirionSEN66::MeasuredValues* measuredValues)
 {
     // Update the Air QUality clusters
 
     if (measuredValues->AmbientHumidity != 0x7FFF)
         UpdateAttributeValueInt16(
-            endpoint,
+            airQualityEndpoint,
             RelativeHumidityMeasurement::Id,
             RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->AmbientHumidity);
 
     if (measuredValues->AmbientTemperature != 0x7FFF)
         UpdateAttributeValueInt16(
-            endpoint,
+            airQualityEndpoint,
             TemperatureMeasurement::Id,
             TemperatureMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->AmbientTemperature / 2);
 
     if (measuredValues->CO2 != 0xFFFF)
         UpdateAttributeValueFloat(
-            endpoint,
+            airQualityEndpoint,
             CarbonDioxideConcentrationMeasurement::Id,
             CarbonDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->CO2);
 
     if (measuredValues->ParticulateMatter1p0 != 0xFFFF)
         UpdateAttributeValueFloat(
-            endpoint,
+            airQualityEndpoint,
             Pm1ConcentrationMeasurement::Id,
             Pm1ConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->ParticulateMatter1p0 / 10);
 
     if (measuredValues->ParticulateMatter2p5 != 0xFFFF)
         UpdateAttributeValueFloat(
-            endpoint,
+            airQualityEndpoint,
             Pm25ConcentrationMeasurement::Id,
             Pm25ConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->ParticulateMatter2p5 / 10);
 
     if (measuredValues->ParticulateMatter10p0 != 0xFFFF)
         UpdateAttributeValueFloat(
-            endpoint,
+            airQualityEndpoint,
             Pm10ConcentrationMeasurement::Id,
             Pm10ConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->ParticulateMatter10p0 / 10);
 
     if (measuredValues->VOCIndex != 0x7FFF)
         UpdateAttributeValueFloat(
-            endpoint,
+            airQualityEndpoint,
             TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
             TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->VOCIndex / 10);
 
     if (measuredValues->NOxIndex != 0x7FFF)
         UpdateAttributeValueFloat(
-            endpoint,
+            airQualityEndpoint,
             NitrogenDioxideConcentrationMeasurement::Id,
             NitrogenDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
             measuredValues->NOxIndex / 10);
 
-    AirQualityEnum airQuality = classifyAirQuality(measuredValues);
+    AirQualityEnum airQuality = ClassifyAirQuality(measuredValues);
     
     UpdateAttributeValueInt16(
-        endpoint,
+        airQualityEndpoint,
         AirQuality::Id,
         AirQuality::Attributes::AirQuality::Id,
-        static_cast<int16_t>(airQuality)
+        static_cast<int16_t>(airQuality));
 
-);
-
+    SetLightColorByAirQuality(colorControlEndpoint, airQuality);
 }
 
 // Timer callback to measure air quality
@@ -826,7 +886,6 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
 {
     MatterAirQuality* airQuality = static_cast<MatterAirQuality*>(arg);
 
-    endpoint_t* endpoint = airQuality->m_airQualityEndpoint;
     SensirionSEN66* sensor = &airQuality->m_sensirionSEN66;
 
     SensirionSEN66::MeasuredValues* measuredValues = new SensirionSEN66::MeasuredValues();
@@ -837,9 +896,14 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
     ESP_LOGI(TAG, "app_main: co2 = %d", measuredValues->CO2);
 
     // Need to use Schedule work on Matter thread for thread safety
-    chip::DeviceLayer::SystemLayer().ScheduleLambda([endpoint, measuredValues]
+    chip::DeviceLayer::SystemLayer().ScheduleLambda(
+        [
+            airQualityEndpoint = airQuality->m_airQualityEndpoint,
+            colorControlEndpoint = airQuality->m_colorControlEndpoint,
+            measuredValues
+        ]
         {
-            MatterAirQuality::UpdateAirQualityAttributes(endpoint, measuredValues);
+            UpdateAirQualityAttributes(airQualityEndpoint, colorControlEndpoint, measuredValues);
             delete measuredValues;           
         }
     );
@@ -857,14 +921,15 @@ Add this include file to "app_main.cpp":
 Declare the variable:
 
 ```
-MatterAirQuality matterAirQuality;
+MatterAirQuality* matterAirQuality;
 ```
 
 Add this code to "app_main.cpp" after the endpoints in the existing code have been added:
 
 ```
-    matterAirQuality.CreateEndpoint(node);
-    matterAirQuality.StartMeasurements();
+    matterAirQuality = new MatterAirQuality(endpoint);
+    matterAirQuality->CreateAirQualityEndpoint(node);
+    matterAirQuality->StartMeasurements();
 ```
 
 ## Enable Clusters
