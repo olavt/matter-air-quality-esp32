@@ -858,7 +858,7 @@ static uint8_t HueDegreesToUInt8(float degrees)
 
 static void SetLightColorByAirQuality(endpoint_t* colorControlEndpoint, AirQualityEnum airQuality)
 {
-    uint8_t saturation = 255; // Full saturation for vivid colors
+    uint8_t saturation = 254; // Full saturation for vivid colors
     uint8_t hue = 0;
 
     switch (airQuality) {
