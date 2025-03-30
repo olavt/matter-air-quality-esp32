@@ -812,7 +812,7 @@ AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues
 
 static void UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_t* colorControlEndpoint, SensirionSEN66::MeasuredValues* measuredValues)
 {
-    // Update the Air QUality clusters
+    // Update the Air Quality clusters
 
     if (measuredValues->AmbientHumidity != 0x7FFF)
         UpdateAttributeValueInt16(
