@@ -625,6 +625,15 @@ void MatterAirQuality::StartMeasurements()
         ESP_LOGI(TAG, "Air quality timer started");
 }
 
+void static UpdateAttributeValueUInt8(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint8_t value)
+{
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+
+    esp_matter_attr_val_t val = esp_matter_uint8(value);
+
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
 void MatterAirQuality::AddRelativeHumidityMeasurementCluster()
 {
     esp_matter::cluster::relative_humidity_measurement::config_t relative_humidity_config;
@@ -646,6 +655,20 @@ void MatterAirQuality::AddCarbonDioxideConcentrationMeasurementCluster()
     // Add the NumericMeasurement (MEA) Feature flag    
     cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
     cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+
+    // Set the MeasurementUnit to PPM
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        CarbonDioxideConcentrationMeasurement::Id,
+        CarbonDioxideConcentrationMeasurement::Attributes::MeasurementUnit::Id,
+        static_cast<int16_t>(CarbonDioxideConcentrationMeasurement::MeasurementUnitEnum::kPpm));
+
+    // Set the MeasurementMedium to Air
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        CarbonDioxideConcentrationMeasurement::Id,
+        CarbonDioxideConcentrationMeasurement::Attributes::MeasurementMedium::Id,
+        static_cast<int16_t>(CarbonDioxideConcentrationMeasurement::MeasurementMediumEnum::kAir));
 }
 
 void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
@@ -656,6 +679,20 @@ void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
     // Add the NumericMeasurement (MEA) Feature flag    
     cluster::pm1_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
     cluster::pm1_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+
+    // Set the MeasurementUnit to Microgram per m3
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        Pm1ConcentrationMeasurement::Id,
+        Pm1ConcentrationMeasurement::Attributes::MeasurementUnit::Id,
+        static_cast<int16_t>(Pm1ConcentrationMeasurement::MeasurementUnitEnum::kUgm3));
+
+    // Set the MeasurementMedium to Air
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        Pm1ConcentrationMeasurement::Id,
+        Pm1ConcentrationMeasurement::Attributes::MeasurementMedium::Id,
+        static_cast<int16_t>(Pm1ConcentrationMeasurement::MeasurementMediumEnum::kAir));
 }
 
 void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
@@ -666,6 +703,20 @@ void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::pm25_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
     cluster::pm25_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+
+    // Set the MeasurementUnit to Microgram per m3
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        Pm25ConcentrationMeasurement::Id,
+        Pm25ConcentrationMeasurement::Attributes::MeasurementUnit::Id,
+        static_cast<int16_t>(Pm25ConcentrationMeasurement::MeasurementUnitEnum::kUgm3));
+
+    // Set the MeasurementMedium to Air
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        Pm25ConcentrationMeasurement::Id,
+        Pm25ConcentrationMeasurement::Attributes::MeasurementMedium::Id,
+        static_cast<int16_t>(Pm25ConcentrationMeasurement::MeasurementMediumEnum::kAir));    
 }
 
 void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
@@ -673,9 +724,23 @@ void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
     esp_matter::cluster::pm10_concentration_measurement::config_t pm10_measurement;
     cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(m_airQualityEndpoint, &pm10_measurement, CLUSTER_FLAG_SERVER);
 
-        // Add the NumericMeasurement (MEA) Feature flag
+    // Add the NumericMeasurement (MEA) Feature flag
     cluster::pm10_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
     cluster::pm10_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+
+    // Set the MeasurementUnit to Microgram per m3
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        Pm10ConcentrationMeasurement::Id,
+        Pm10ConcentrationMeasurement::Attributes::MeasurementUnit::Id,
+        static_cast<int16_t>(Pm10ConcentrationMeasurement::MeasurementUnitEnum::kUgm3));
+
+    // Set the MeasurementMedium to Air
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        Pm10ConcentrationMeasurement::Id,
+        Pm10ConcentrationMeasurement::Attributes::MeasurementMedium::Id,
+        static_cast<int16_t>(Pm10ConcentrationMeasurement::MeasurementMediumEnum::kAir));    
 }
 
 void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
@@ -686,6 +751,20 @@ void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
     cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+
+    // Set the MeasurementUnit to PPM
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        NitrogenDioxideConcentrationMeasurement::Id,
+        NitrogenDioxideConcentrationMeasurement::Attributes::MeasurementUnit::Id,
+        static_cast<int16_t>(NitrogenDioxideConcentrationMeasurement::MeasurementUnitEnum::kPpm));
+
+    // Set the MeasurementMedium to Air
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        NitrogenDioxideConcentrationMeasurement::Id,
+        NitrogenDioxideConcentrationMeasurement::Attributes::MeasurementMedium::Id,
+        static_cast<int16_t>(NitrogenDioxideConcentrationMeasurement::MeasurementMediumEnum::kAir));    
 }
 
 void MatterAirQuality::AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster()
@@ -696,6 +775,20 @@ void MatterAirQuality::AddTotalVolatileOrganicCompoundsConcentrationMeasurementC
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
     cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::add(cluster, &numeric_measurement_config);
+
+    // Set the MeasurementUnit to PPM
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
+        TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasurementUnit::Id,
+        static_cast<int16_t>(TotalVolatileOrganicCompoundsConcentrationMeasurement::MeasurementUnitEnum::kPpm));
+
+    // Set the MeasurementMedium to Air
+    UpdateAttributeValueUInt8(
+        m_airQualityEndpoint,
+        TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
+        TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasurementMedium::Id,
+        static_cast<int16_t>(TotalVolatileOrganicCompoundsConcentrationMeasurement::MeasurementMediumEnum::kAir));
 }
 
 void MatterAirQuality::AddAirQualityClusterFeatures()
@@ -707,15 +800,6 @@ void MatterAirQuality::AddAirQualityClusterFeatures()
     //cluster::air_quality::feature::mod::add(cluster);
     //cluster::air_quality::feature::vpoor::add(cluster);
     //cluster::air_quality::feature::xpoor::add(cluster);
-}
-
-void static UpdateAttributeValueUInt8(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint8_t value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    esp_matter_attr_val_t val = esp_matter_uint8(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
 static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
@@ -736,7 +820,6 @@ static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id,
     esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-
 static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint8_t saturation)
 {
     // Update Hue (0–254, maps to 0°–360°)
@@ -752,6 +835,8 @@ static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint
         ColorControl::Id,
         ColorControl::Attributes::CurrentSaturation::Id,
         saturation);
+
+    ESP_LOGI(TAG, "SetLightColorHSV: CurrentHue=%d CurrentSaturation=%d" , hue, saturation);     
 }
 
 static void SetLightColorByAirQuality(endpoint_t* colorControlEndpoint, AirQualityEnum airQuality)
@@ -892,8 +977,8 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
 
     int16_t status = sensor->ReadMeasuredValues(measuredValues);
 
-    ESP_LOGI(TAG, "app_main: temperature = %d", measuredValues->AmbientTemperature);
-    ESP_LOGI(TAG, "app_main: co2 = %d", measuredValues->CO2);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: temperature=%d", measuredValues->AmbientTemperature);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: co2=%d", measuredValues->CO2);
 
     // Need to use Schedule work on Matter thread for thread safety
     chip::DeviceLayer::SystemLayer().ScheduleLambda(
