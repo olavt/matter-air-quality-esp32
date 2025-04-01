@@ -272,7 +272,7 @@ Copy the .h and .c source files to your projects main/drivers directory.
 
 Replace the content of the sensirion_i2c_hal.c source file with this code:
 
-```
+```cpp
 #include "sensirion_i2c_hal.h"
 #include "sensirion_common.h"
 #include "sensirion_config.h"
@@ -419,7 +419,7 @@ void sensirion_i2c_hal_sleep_usec(uint32_t useconds) {
 
 Create a new "SensirionSEN66.h" file in the "main" folder with the following code:
 
-```
+```cpp
 #include <stdint.h>
 
 class SensirionSEN66
@@ -454,7 +454,7 @@ public:
 
 Create a new "SensirionSEN66.cpp" file with the following code:
 
-```
+```cpp
 #include "SensirionSEN66.h"
 #include "drivers/sen66_i2c.h"
 #include "drivers/sensirion_common.h"
@@ -500,7 +500,7 @@ int16_t SensirionSEN66::StartContiniousMeasurement()
 
 Create a new "MatterAirQuality.h" file in the "main" folder with the following code:
 
-```
+```cpp
 #pragma once
 
 #include <esp_matter.h>
@@ -514,7 +514,7 @@ class MatterAirQuality
 {
     public:
 
-        MatterAirQuality(endpoint_t* colorControlEndpoint);
+        MatterAirQuality(endpoint_t* lightEndpoint);
 
         void CreateAirQualityEndpoint(node_t* node);
         
@@ -522,7 +522,7 @@ class MatterAirQuality
 
     private:
 
-        endpoint_t* m_colorControlEndpoint;
+        endpoint_t* m_lightEndpoint;
         endpoint_t* m_airQualityEndpoint;
         SensirionSEN66 m_sensirionSEN66;
         esp_timer_handle_t m_timer_handle;
@@ -552,7 +552,7 @@ class MatterAirQuality
 
 Create a new "MatterAirQuality.cpp" file in the "main" folder with the following code:
 
-```
+```cpp
 #include "MatterAirQuality.h"
 
 #include <esp_err.h>
@@ -568,9 +568,9 @@ using namespace chip::app::Clusters::AirQuality;
 
 static const char *TAG = "MatterAirQuality";
 
-MatterAirQuality::MatterAirQuality(endpoint_t* colorControlEndpoint)
+MatterAirQuality::MatterAirQuality(endpoint_t* lightEndpoint)
 {
-    m_colorControlEndpoint = colorControlEndpoint;
+    m_lightEndpoint = lightEndpoint;
 }
 
 void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
@@ -626,11 +626,38 @@ void MatterAirQuality::StartMeasurements()
         ESP_LOGI(TAG, "Air quality timer started");
 }
 
+void static UpdateAttributeValueBool(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, bool value)
+{
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+
+    esp_matter_attr_val_t val = esp_matter_bool(value);
+
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
 void static UpdateAttributeValueUInt8(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint8_t value)
 {
     uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
 
     esp_matter_attr_val_t val = esp_matter_uint8(value);
+
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
+static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+{
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+
+    esp_matter_attr_val_t val = esp_matter_int16(value);
+
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
+
+static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
+{
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+
+    esp_matter_attr_val_t val = esp_matter_float(value);
 
     esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
@@ -803,25 +830,27 @@ void MatterAirQuality::AddAirQualityClusterFeatures()
     //cluster::air_quality::feature::xpoor::add(cluster);
 }
 
-static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+static void SetLightOnOff(endpoint_t* lightEndpoint, bool on)
 {
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    esp_matter_attr_val_t val = esp_matter_int16(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+    UpdateAttributeValueBool(
+        lightEndpoint,
+        OnOff::Id,
+        OnOff::Attributes::OnOff::Id,
+        on);
 }
 
-static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
+static void SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent)
 {
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+    uint8_t level = (uint8_t)((levelPercent / 100) * 256 + 0.5);
 
-    esp_matter_attr_val_t val = esp_matter_float(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+    UpdateAttributeValueUInt8(
+        lightEndpoint,
+        LevelControl::Id,
+        LevelControl::Attributes::CurrentLevel::Id,
+        level);    
 }
 
-static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint8_t saturation)
+static void SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation)
 {
     // Hue represents the color. It ranges from 0 to 360 degrees.
     // 0 degrees = Red
@@ -830,13 +859,13 @@ static void SetLightColorHSV(endpoint_t* colorControlEndpoint, uint8_t hue, uint
     // In matter it's representet as a byte with the range 0 to 255.
 
     UpdateAttributeValueUInt8(
-        colorControlEndpoint,
+        lightEndpoint,
         ColorControl::Id,
         ColorControl::Attributes::CurrentHue::Id,
         hue);
 
     UpdateAttributeValueUInt8(
-        colorControlEndpoint,
+        lightEndpoint,
         ColorControl::Id,
         ColorControl::Attributes::CurrentSaturation::Id,
         saturation);
@@ -856,40 +885,51 @@ static uint8_t HueDegreesToUInt8(float degrees)
     return (uint8_t)(scaled + 0.5f);    
 }
 
-static void SetLightColorByAirQuality(endpoint_t* colorControlEndpoint, AirQualityEnum airQuality)
+static void SetLightByAirQuality(
+    endpoint_t* lightEndpoint,
+    AirQualityEnum airQuality)
 {
     uint8_t saturation = 254; // Full saturation for vivid colors. Note! 255 is reserved and should not be used.
     uint8_t hue = 0;
+    float level = 0.0;
 
     switch (airQuality) {
         case AirQuality::AirQualityEnum::kGood:
             hue = HueDegreesToUInt8(120.0); // Green
+            level = 10.0;
             break;
         case AirQuality::AirQualityEnum::kFair:
             hue = HueDegreesToUInt8(100.0); // Green-yellow
+            level = 10.0;
             break;
         case AirQuality::AirQualityEnum::kModerate:
             hue = HueDegreesToUInt8(80.0);  // Yellow-green (~80°)
+            level = 15.0;
             break;
         case AirQuality::AirQualityEnum::kPoor:
             hue = HueDegreesToUInt8(60.0);  // Yellow
+            level = 15.0;
             break;
         case AirQuality::AirQualityEnum::kVeryPoor:
             hue = HueDegreesToUInt8(30.0);  // Orange
+            level = 20.0;
             break;
         case AirQuality::AirQualityEnum::kExtremelyPoor:
             hue = HueDegreesToUInt8(0.0);   // Red
+            level = 30.0;
             break;
         case AirQuality::AirQualityEnum::kUnknown:
-            hue = 0;  // Neutral (could also reduce saturation)
-            saturation = 0; // White/off
+            hue = 0;     // Neutral (could also reduce saturation)
+            level = 0.0; // Off
             break;
         default:
             ESP_LOGE(TAG, "Unknown air quality enum value");
             return;
     }
     
-    SetLightColorHSV(colorControlEndpoint, hue, saturation);    
+    SetLightOnOff(lightEndpoint, true);
+    SetLightColorHSV(lightEndpoint, hue, saturation);
+    SetLightLevelPercent(lightEndpoint, level);   
 }
 
 AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
@@ -912,7 +952,10 @@ AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues
         return AirQualityEnum::kExtremelyPoor;
 }
 
-static void UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_t* colorControlEndpoint, SensirionSEN66::MeasuredValues* measuredValues)
+static void UpdateAirQualityAttributes(
+    endpoint_t* airQualityEndpoint,
+    endpoint_t* lightEndpoint,
+    SensirionSEN66::MeasuredValues* measuredValues)
 {
     // Update the Air Quality clusters
 
@@ -980,7 +1023,7 @@ static void UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_
         AirQuality::Attributes::AirQuality::Id,
         static_cast<int16_t>(airQuality));
 
-    SetLightColorByAirQuality(colorControlEndpoint, airQuality);
+    SetLightByAirQuality(lightEndpoint, airQuality);
 }
 
 // Timer callback to measure air quality
@@ -1001,11 +1044,11 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
     chip::DeviceLayer::SystemLayer().ScheduleLambda(
         [
             airQualityEndpoint = airQuality->m_airQualityEndpoint,
-            colorControlEndpoint = airQuality->m_colorControlEndpoint,
+            lightEndpoint = airQuality->m_lightEndpoint,
             measuredValues
         ]
         {
-            UpdateAirQualityAttributes(airQualityEndpoint, colorControlEndpoint, measuredValues);
+            UpdateAirQualityAttributes(airQualityEndpoint, lightEndpoint, measuredValues);
             delete measuredValues;           
         }
     );
@@ -1016,7 +1059,7 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
 
 Add this include file to "app_main.cpp":
 
-```
+```cpp
 #include "MatterAirQuality.h"
 ```
 
@@ -1049,3 +1092,80 @@ CONFIG_SUPPORT_TVOC_CONCENTRATION_MEASUREMENT_CLUSTER=y
 ```
 
 ## Build and Flash your project
+
+## Add Optional Features
+
+### Add BootReason Attribute to General Diagnostics Cluster
+
+```cpp
+static uint8_t GetMatterBootReason() {
+    esp_reset_reason_t reason = esp_reset_reason();
+    switch (reason) {
+        case ESP_RST_POWERON:
+            return 0x00; // PowerOnReset
+        case ESP_RST_SW:
+            return 0x03; // SoftwareReset
+        case ESP_RST_INT_WDT:
+        case ESP_RST_TASK_WDT:
+        case ESP_RST_WDT:
+            return 0x04; // WatchdogReset
+        case ESP_RST_BROWNOUT:
+            return 0x02; // BrownoutReset
+        case ESP_RST_PANIC:
+            return 0x05; // CrashReset
+        case ESP_RST_EXT:
+        default:
+            return 0xFF; // Unknown (Matter allows vendor-specific values >= 0x80)
+    }
+}
+
+void ConfigureGeneralDiagnosticsCluster(node_t* node)
+{
+    esp_matter::endpoint_t *rootEndpoint = esp_matter::endpoint::get(node, 0);
+    cluster_t *cluster = cluster::get(rootEndpoint, GeneralDiagnostics::Id);
+
+    uint8_t bootReason = GetMatterBootReason();
+    cluster::general_diagnostics::attribute::create_boot_reason(cluster, bootReason);
+}
+```
+
+## Add Diagnostics Clusters
+
+```cpp
+void AddSoftwareDiagnosticsCluster(node_t* node)
+{
+    endpoint_t* root_endpoint = endpoint::get(node, 0);
+
+    cluster::software_diagnostics::config_t config;
+    uint32_t features = cluster::software_diagnostics::feature::watermarks::get_id();
+    cluster::software_diagnostics::create(root_endpoint, &config, CLUSTER_FLAG_SERVER, features);
+}
+
+void AddThreadNetworkDiagnosticsCluster(node_t* node)
+{
+    endpoint_t* root_endpoint = endpoint::get(node, 0);
+
+    cluster::thread_network_diagnostics::config_t thread_network_config;
+    cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
+}
+```
+
+Add these settings to "sdkconfig.defaults":
+
+```
+# Configuration for the Software Diagnostics Cluster
+CONFIG_SUPPORT_SOFTWARE_DIAGNOSTICS_CLUSTER=y
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+```
+
+## Add More Features to Color Control Cluster
+
+```cpp
+void AddColorControlClusterFeatures(endpoint_t* endpoint)
+{
+    cluster_t *cluster = cluster::get(endpoint, ColorControl::Id);
+
+    cluster::color_control::feature::hue_saturation::config_t config;
+    cluster::color_control::feature::hue_saturation::add(cluster, &config);
+}
+```
