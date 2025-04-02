@@ -509,6 +509,7 @@ Create a new "MatterAirQuality.h" file in the "main" folder with the following c
 
 using namespace esp_matter;
 using namespace esp_matter::endpoint;
+using namespace chip::app::Clusters::AirQuality;
 
 class MatterAirQuality
 {
@@ -545,7 +546,22 @@ class MatterAirQuality
 
         void AddAirQualityClusterFeatures();
 
-        void static MeasureAirQualityTimerCallback(void *arg);
+        static void MeasureAirQualityTimerCallback(void *arg);
+
+        static void SetLightOnOff(endpoint_t* lightEndpoint, bool on);
+
+        static void SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent);
+
+        static void SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation);
+
+        static void SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality);
+
+        static AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues);
+
+        static void UpdateAirQualityAttributes(
+            endpoint_t* airQualityEndpoint,
+            endpoint_t* lightEndpoint,
+            SensirionSEN66::MeasuredValues* measuredValues);
 
 };
 ```
@@ -564,7 +580,6 @@ Create a new "MatterAirQuality.cpp" file in the "main" folder with the following
 
 using namespace esp_matter::attribute;
 using namespace chip::app::Clusters;
-using namespace chip::app::Clusters::AirQuality;
 
 static const char *TAG = "MatterAirQuality";
 
@@ -599,6 +614,10 @@ void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
 
 void MatterAirQuality::StartMeasurements()
 {
+    SetLightOnOff(m_lightEndpoint, false);
+    SetLightColorHSV(m_lightEndpoint, 0, 0);
+    SetLightLevelPercent(m_lightEndpoint, 0.0);
+
     int16_t status = m_sensirionSEN66.StartContiniousMeasurement();
     ABORT_APP_ON_FAILURE(status == NO_ERROR, ESP_LOGE(TAG, "SEN66 StartContiniousMeasurement failed."));
 
@@ -830,7 +849,7 @@ void MatterAirQuality::AddAirQualityClusterFeatures()
     //cluster::air_quality::feature::xpoor::add(cluster);
 }
 
-static void SetLightOnOff(endpoint_t* lightEndpoint, bool on)
+void MatterAirQuality::SetLightOnOff(endpoint_t* lightEndpoint, bool on)
 {
     UpdateAttributeValueBool(
         lightEndpoint,
@@ -839,7 +858,7 @@ static void SetLightOnOff(endpoint_t* lightEndpoint, bool on)
         on);
 }
 
-static void SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent)
+void MatterAirQuality::SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent)
 {
     uint8_t level = (uint8_t)((levelPercent / 100) * 256 + 0.5);
 
@@ -850,13 +869,15 @@ static void SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent)
         level);    
 }
 
-static void SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation)
+void MatterAirQuality::SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation)
 {
     // Hue represents the color. It ranges from 0 to 360 degrees.
     // 0 degrees = Red
     // 120 degrees = Green
     // 240 degrees = Blue
     // In matter it's representet as a byte with the range 0 to 255.
+
+    ESP_LOGI(TAG, "SetLightColorHSV: CurrentHue=%d CurrentSaturation=%d" , hue, saturation); 
 
     UpdateAttributeValueUInt8(
         lightEndpoint,
@@ -868,9 +889,7 @@ static void SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t sat
         lightEndpoint,
         ColorControl::Id,
         ColorControl::Attributes::CurrentSaturation::Id,
-        saturation);
-
-    ESP_LOGI(TAG, "SetLightColorHSV: CurrentHue=%d CurrentSaturation=%d" , hue, saturation);     
+        saturation);    
 }
 
 static uint8_t HueDegreesToUInt8(float degrees)
@@ -885,9 +904,7 @@ static uint8_t HueDegreesToUInt8(float degrees)
     return (uint8_t)(scaled + 0.5f);    
 }
 
-static void SetLightByAirQuality(
-    endpoint_t* lightEndpoint,
-    AirQualityEnum airQuality)
+void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality)
 {
     uint8_t saturation = 254; // Full saturation for vivid colors. Note! 255 is reserved and should not be used.
     uint8_t hue = 0;
@@ -932,7 +949,7 @@ static void SetLightByAirQuality(
     SetLightLevelPercent(lightEndpoint, level);   
 }
 
-AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
+AirQualityEnum MatterAirQuality::ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
 {
     uint16_t co2Value = measuredValues->CO2;
 
@@ -952,7 +969,7 @@ AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues
         return AirQualityEnum::kExtremelyPoor;
 }
 
-static void UpdateAirQualityAttributes(
+void MatterAirQuality::UpdateAirQualityAttributes(
     endpoint_t* airQualityEndpoint,
     endpoint_t* lightEndpoint,
     SensirionSEN66::MeasuredValues* measuredValues)
@@ -1074,6 +1091,11 @@ Add this code to "app_main.cpp" after the endpoints in the existing code have be
 ```
     matterAirQuality = new MatterAirQuality(endpoint);
     matterAirQuality->CreateAirQualityEndpoint(node);
+```
+
+Add this code to the very end of "app_main.cpp" after the call to app_driver_light_set_defaults:
+
+```
     matterAirQuality->StartMeasurements();
 ```
 
