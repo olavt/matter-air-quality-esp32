@@ -1160,7 +1160,14 @@ void AddSoftwareDiagnosticsCluster(node_t* node)
 
     cluster::software_diagnostics::config_t config;
     uint32_t features = cluster::software_diagnostics::feature::watermarks::get_id();
-    cluster::software_diagnostics::create(root_endpoint, &config, CLUSTER_FLAG_SERVER, features);
+    cluster_t* cluster = cluster::software_diagnostics::create(root_endpoint, &config, CLUSTER_FLAG_SERVER, features);
+
+    attribute::create(cluster, SoftwareDiagnostics::Attributes::CurrentHeapFree::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
+        esp_matter_uint64(0));
+    attribute::create(cluster, SoftwareDiagnostics::Attributes::CurrentHeapUsed::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
+        esp_matter_uint64(0));
+    attribute::create(cluster, SoftwareDiagnostics::Attributes::ThreadMetrics::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
+        esp_matter_array(nullptr, 0, 0));
 }
 
 void AddThreadNetworkDiagnosticsCluster(node_t* node)
