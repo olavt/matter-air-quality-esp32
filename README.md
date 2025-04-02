@@ -1162,6 +1162,8 @@ void AddSoftwareDiagnosticsCluster(node_t* node)
     uint32_t features = cluster::software_diagnostics::feature::watermarks::get_id();
     cluster_t* cluster = cluster::software_diagnostics::create(root_endpoint, &config, CLUSTER_FLAG_SERVER, features);
 
+    // TBD: create functions does not exist for these attributes in the esp-matter SDK yet.
+    // Check if implemented in later versions.
     attribute::create(cluster, SoftwareDiagnostics::Attributes::CurrentHeapFree::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
         esp_matter_uint64(0));
     attribute::create(cluster, SoftwareDiagnostics::Attributes::CurrentHeapUsed::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
