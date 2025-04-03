@@ -614,9 +614,10 @@ void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
 
 void MatterAirQuality::StartMeasurements()
 {
+    // Initialize LED to a known state
     SetLightOnOff(m_lightEndpoint, false);
-    SetLightColorHSV(m_lightEndpoint, 0, 0);
     SetLightLevelPercent(m_lightEndpoint, 0.0);
+    SetLightColorHSV(m_lightEndpoint, 0, 0);
 
     int16_t status = m_sensirionSEN66.StartContiniousMeasurement();
     ABORT_APP_ON_FAILURE(status == NO_ERROR, ESP_LOGE(TAG, "SEN66 StartContiniousMeasurement failed."));
@@ -860,7 +861,13 @@ void MatterAirQuality::SetLightOnOff(endpoint_t* lightEndpoint, bool on)
 
 void MatterAirQuality::SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent)
 {
-    uint8_t level = (uint8_t)((levelPercent / 100) * 256 + 0.5);
+    // For the CurrentLevel attribute:
+    // A value of 0x00 SHALL NOT be used.
+    // A value of 0x01 SHALL indicate the minimum level that can be attained on a device.
+    // A value of 0xFE SHALL indicate the maximum level that can be attained on a device.
+    // A value of null SHALL represent an undefined value.
+    // All other values are application specific gradations from the minimum to the maximum level. 
+    uint8_t level = static_cast<uint8_t>((levelPercent / 100.0f) * 0xFD) + 0x01;
 
     UpdateAttributeValueUInt8(
         lightEndpoint,
