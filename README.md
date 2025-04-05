@@ -415,14 +415,14 @@ void sensirion_i2c_hal_sleep_usec(uint32_t useconds) {
 }
 ```
 
-## Add a class for the Sensirion SEN66 Sensor
+## Add an abstract class for an Air Quality Sensor
 
-Create a new "SensirionSEN66.h" file in the "main" folder with the following code:
+Create a new "AirQualitySensor.h" file in the "main" folder with the following code:
 
 ```cpp
-#include <stdint.h>
+#pragma once
 
-class SensirionSEN66
+class AirQualitySensor
 {
 public:
 
@@ -430,24 +430,50 @@ public:
   {
   public:
 
-    uint16_t ParticulateMatter1p0 = 0;
-    uint16_t ParticulateMatter2p5 = 0;
-    uint16_t ParticulateMatter4p0 = 0;
-    uint16_t ParticulateMatter10p0 = 0;
-    int16_t AmbientHumidity = 0;
-    int16_t AmbientTemperature = 0;
-    int16_t VOCIndex = 0;
-    int16_t NOxIndex = 0;
-    uint16_t CO2 = 0;
+    float ParticulateMatter1p0 = 0;
+    float ParticulateMatter2p5 = 0;
+    float ParticulateMatter4p0 = 0;
+    float ParticulateMatter10p0 = 0;
+    float AmbientHumidity = 0;
+    float AmbientTemperature = 0;
+    float VOCIndex = 0;
+    float NOxIndex = 0;
+    float CO2 = 0;
   };
 
+    // Virtual destructor (important for proper cleanup in inheritance)
+    virtual ~AirQualitySensor() = default;
+
+    // Pure virtual functions (abstract methods)
+    virtual void Init() = 0;
+    
+    virtual int ReadMeasuredValues(MeasuredValues* measuredValues) = 0;
+    
+    virtual int SetSensorAltitude(float altitude) = 0;
+    
+    virtual int StartContiniousMeasurement() = 0;
+
+};
+```
+
+## Create a class for the Sensirion SEN66 Sensor
+
+Create a new "SensirionSEN66.h" file in the "main" folder with the following code:
+
+```cpp
+#include "AirQualitySensor.h"
+
+class SensirionSEN66 : public AirQualitySensor
+{
+public:
+
   void Init();
+    
+  int ReadMeasuredValues(MeasuredValues* measuredValues);
 
-  int16_t ReadMeasuredValues(MeasuredValues* measuredValues);
+  int SetSensorAltitude(float altitude);
 
-  int16_t SetSensorAltitude(uint16_t altitude);
-
-  int16_t StartContiniousMeasurement();
+  int StartContiniousMeasurement();
 
 };
 ```
@@ -456,6 +482,7 @@ Create a new "SensirionSEN66.cpp" file with the following code:
 
 ```cpp
 #include "SensirionSEN66.h"
+#include <stdint.h>
 #include "drivers/sen66_i2c.h"
 #include "drivers/sensirion_common.h"
 #include "drivers/sensirion_i2c_hal.h"
@@ -466,29 +493,49 @@ void SensirionSEN66::Init()
   sen66_init(SEN66_I2C_ADDR_6B);
 }
 
-int16_t SensirionSEN66::ReadMeasuredValues(MeasuredValues* measuredValues)
+int SensirionSEN66::ReadMeasuredValues(MeasuredValues* measuredValues)
 {
+  uint16_t particulateMatter1p0 = 0;
+  uint16_t particulateMatter2p5 = 0;
+  uint16_t particulateMatter4p0 = 0;
+  uint16_t particulateMatter10p0 = 0;
+  int16_t ambientHumidity = 0;
+  int16_t ambientTemperature = 0;
+  int16_t vocIndex = 0;
+  int16_t noxIndex = 0;
+  uint16_t co2 = 0;
+
   int16_t status = sen66_read_measured_values_as_integers(
-    &measuredValues->ParticulateMatter1p0,
-    &measuredValues->ParticulateMatter2p5,
-    &measuredValues->ParticulateMatter4p0,
-    &measuredValues->ParticulateMatter10p0,
-    &measuredValues->AmbientHumidity,
-    &measuredValues->AmbientTemperature,
-    &measuredValues->VOCIndex,
-    &measuredValues->NOxIndex,
-    &measuredValues->CO2);
+    &particulateMatter1p0,
+    &particulateMatter2p5,
+    &particulateMatter4p0,
+    &particulateMatter10p0,
+    &ambientHumidity,
+    &ambientTemperature,
+    &vocIndex,
+    &noxIndex,
+    &co2);
+
+    measuredValues->ParticulateMatter1p0 = particulateMatter1p0 / 10.0f;
+    measuredValues->ParticulateMatter2p5 = particulateMatter2p5 / 10.0f;
+    measuredValues->ParticulateMatter4p0 = particulateMatter4p0 / 10.0f;
+    measuredValues->ParticulateMatter10p0 = particulateMatter10p0 / 10.0f;
+    measuredValues->AmbientHumidity = ambientHumidity / 100.0f;
+    measuredValues->AmbientTemperature = ambientTemperature / 200.0f;
+    measuredValues->VOCIndex = vocIndex / 10.0f;
+    measuredValues->NOxIndex = noxIndex / 10.0f;
+    measuredValues->CO2 = co2;
 
     return status;
 }
 
-int16_t SensirionSEN66::SetSensorAltitude(uint16_t altitude)
+int SensirionSEN66::SetSensorAltitude(float altitude)
 {
   int16_t status = sen66_set_sensor_altitude(altitude);
   return status;
 }
 
-int16_t SensirionSEN66::StartContiniousMeasurement()
+int SensirionSEN66::StartContiniousMeasurement()
 {
   int16_t status = sen66_start_continuous_measurement();
 
@@ -505,7 +552,7 @@ Create a new "MatterAirQuality.h" file in the "main" folder with the following c
 
 #include <esp_matter.h>
 
-#include "SensirionSEN66.h"
+#include "AirQualitySensor.h"
 
 using namespace esp_matter;
 using namespace esp_matter::endpoint;
@@ -515,7 +562,7 @@ class MatterAirQuality
 {
     public:
 
-        MatterAirQuality(endpoint_t* lightEndpoint);
+        MatterAirQuality(AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint);
 
         void CreateAirQualityEndpoint(node_t* node);
         
@@ -525,7 +572,7 @@ class MatterAirQuality
 
         endpoint_t* m_lightEndpoint;
         endpoint_t* m_airQualityEndpoint;
-        SensirionSEN66 m_sensirionSEN66;
+        AirQualitySensor* m_airQualitySensor;
         esp_timer_handle_t m_timer_handle;
 
         void AddRelativeHumidityMeasurementCluster();
@@ -556,12 +603,12 @@ class MatterAirQuality
 
         static void SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality);
 
-        static AirQualityEnum ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues);
+        static AirQualityEnum ClassifyAirQuality(AirQualitySensor::MeasuredValues* measuredValues);
 
         static void UpdateAirQualityAttributes(
             endpoint_t* airQualityEndpoint,
             endpoint_t* lightEndpoint,
-            SensirionSEN66::MeasuredValues* measuredValues);
+            AirQualitySensor::MeasuredValues* measuredValues);
 
 };
 ```
@@ -583,8 +630,9 @@ using namespace chip::app::Clusters;
 
 static const char *TAG = "MatterAirQuality";
 
-MatterAirQuality::MatterAirQuality(endpoint_t* lightEndpoint)
+MatterAirQuality::MatterAirQuality(AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint)
 {
+    m_airQualitySensor = airQualitySensor;
     m_lightEndpoint = lightEndpoint;
 }
 
@@ -608,8 +656,8 @@ void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
     AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
 
     // Initialize Air Quality Sensor
-    m_sensirionSEN66.Init();
-    m_sensirionSEN66.SetSensorAltitude(25);
+    m_airQualitySensor->Init();
+    m_airQualitySensor->SetSensorAltitude(25.0);
 }
 
 void MatterAirQuality::StartMeasurements()
@@ -619,7 +667,7 @@ void MatterAirQuality::StartMeasurements()
     SetLightLevelPercent(m_lightEndpoint, 0.0);
     SetLightColorHSV(m_lightEndpoint, 0, 0);
 
-    int16_t status = m_sensirionSEN66.StartContiniousMeasurement();
+    int status = m_airQualitySensor->StartContiniousMeasurement();
     ABORT_APP_ON_FAILURE(status == NO_ERROR, ESP_LOGE(TAG, "SEN66 StartContiniousMeasurement failed."));
 
         // Setup periodic timer to measure air quality
@@ -845,9 +893,9 @@ void MatterAirQuality::AddAirQualityClusterFeatures()
 
     /* Add additional features to the Air Quality cluster */
     cluster::air_quality::feature::fair::add(cluster);
-    //cluster::air_quality::feature::mod::add(cluster);
-    //cluster::air_quality::feature::vpoor::add(cluster);
-    //cluster::air_quality::feature::xpoor::add(cluster);
+    cluster::air_quality::feature::moderate::add(cluster);
+    cluster::air_quality::feature::very_poor::add(cluster);
+    cluster::air_quality::feature::extremely_poor::add(cluster);
 }
 
 void MatterAirQuality::SetLightOnOff(endpoint_t* lightEndpoint, bool on)
@@ -956,7 +1004,7 @@ void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualit
     SetLightLevelPercent(lightEndpoint, level);   
 }
 
-AirQualityEnum MatterAirQuality::ClassifyAirQuality(SensirionSEN66::MeasuredValues* measuredValues)
+AirQualityEnum MatterAirQuality::ClassifyAirQuality(AirQualitySensor::MeasuredValues* measuredValues)
 {
     uint16_t co2Value = measuredValues->CO2;
 
@@ -979,7 +1027,7 @@ AirQualityEnum MatterAirQuality::ClassifyAirQuality(SensirionSEN66::MeasuredValu
 void MatterAirQuality::UpdateAirQualityAttributes(
     endpoint_t* airQualityEndpoint,
     endpoint_t* lightEndpoint,
-    SensirionSEN66::MeasuredValues* measuredValues)
+    AirQualitySensor::MeasuredValues* measuredValues)
 {
     // Update the Air Quality clusters
 
@@ -988,14 +1036,14 @@ void MatterAirQuality::UpdateAirQualityAttributes(
             airQualityEndpoint,
             RelativeHumidityMeasurement::Id,
             RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->AmbientHumidity);
+            measuredValues->AmbientHumidity * 100);
 
     if (measuredValues->AmbientTemperature != 0x7FFF)
         UpdateAttributeValueInt16(
             airQualityEndpoint,
             TemperatureMeasurement::Id,
             TemperatureMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->AmbientTemperature / 2);
+            measuredValues->AmbientTemperature * 100);
 
     if (measuredValues->CO2 != 0xFFFF)
         UpdateAttributeValueFloat(
@@ -1009,35 +1057,35 @@ void MatterAirQuality::UpdateAirQualityAttributes(
             airQualityEndpoint,
             Pm1ConcentrationMeasurement::Id,
             Pm1ConcentrationMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->ParticulateMatter1p0 / 10);
+            measuredValues->ParticulateMatter1p0);
 
     if (measuredValues->ParticulateMatter2p5 != 0xFFFF)
         UpdateAttributeValueFloat(
             airQualityEndpoint,
             Pm25ConcentrationMeasurement::Id,
             Pm25ConcentrationMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->ParticulateMatter2p5 / 10);
+            measuredValues->ParticulateMatter2p5);
 
     if (measuredValues->ParticulateMatter10p0 != 0xFFFF)
         UpdateAttributeValueFloat(
             airQualityEndpoint,
             Pm10ConcentrationMeasurement::Id,
             Pm10ConcentrationMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->ParticulateMatter10p0 / 10);
+            measuredValues->ParticulateMatter10p0);
 
     if (measuredValues->VOCIndex != 0x7FFF)
         UpdateAttributeValueFloat(
             airQualityEndpoint,
             TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
             TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->VOCIndex / 10);
+            measuredValues->VOCIndex);
 
     if (measuredValues->NOxIndex != 0x7FFF)
         UpdateAttributeValueFloat(
             airQualityEndpoint,
             NitrogenDioxideConcentrationMeasurement::Id,
             NitrogenDioxideConcentrationMeasurement::Attributes::MeasuredValue::Id,
-            measuredValues->NOxIndex / 10);
+            measuredValues->NOxIndex);
 
     AirQualityEnum airQuality = ClassifyAirQuality(measuredValues);
     
@@ -1055,14 +1103,20 @@ void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
 {
     MatterAirQuality* airQuality = static_cast<MatterAirQuality*>(arg);
 
-    SensirionSEN66* sensor = &airQuality->m_sensirionSEN66;
+    AirQualitySensor* sensor = airQuality->m_airQualitySensor;
 
-    SensirionSEN66::MeasuredValues* measuredValues = new SensirionSEN66::MeasuredValues();
+    AirQualitySensor::MeasuredValues* measuredValues = new AirQualitySensor::MeasuredValues();
 
-    int16_t status = sensor->ReadMeasuredValues(measuredValues);
+    int status = sensor->ReadMeasuredValues(measuredValues);
 
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: temperature=%d", measuredValues->AmbientTemperature);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: co2=%d", measuredValues->CO2);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: AmbientHumidity: %f", measuredValues->AmbientHumidity);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: AmbientTemperature: %f", measuredValues->AmbientTemperature);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: CO: %f", measuredValues->CO2);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: NOx: %f", measuredValues->NOxIndex);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: VOC: %f", measuredValues->VOCIndex);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM1: %f", measuredValues->ParticulateMatter1p0);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM2.5: %f", measuredValues->ParticulateMatter2p5);
+    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM10: %f", measuredValues->ParticulateMatter10p0);
 
     // Need to use ScheduleLambda to execute the updates to the clusters on the Matter thread for thread safety
     chip::DeviceLayer::SystemLayer().ScheduleLambda(
@@ -1085,6 +1139,7 @@ Add this include file to "app_main.cpp":
 
 ```cpp
 #include "MatterAirQuality.h"
+#include "SensirionSEN66.h"
 ```
 
 Declare the variable:
@@ -1096,7 +1151,8 @@ MatterAirQuality* matterAirQuality;
 Add this code to "app_main.cpp" after the endpoints in the existing code have been added:
 
 ```
-    matterAirQuality = new MatterAirQuality(endpoint);
+    AirQualitySensor* airQualitySensor = new SensirionSEN66();
+    matterAirQuality = new MatterAirQuality(airQualitySensor, endpoint);
     matterAirQuality->CreateAirQualityEndpoint(node);
 ```
 
