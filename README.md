@@ -1006,22 +1006,29 @@ void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualit
 
 AirQualityEnum MatterAirQuality::ClassifyAirQuality(AirQualitySensor::MeasuredValues* measuredValues)
 {
-    uint16_t co2Value = measuredValues->CO2;
+    uint16_t co2_ppm = measuredValues->CO2;
 
-    if (co2Value < 380)
-        return AirQuality::AirQualityEnum::kUnknown;
-    else if (co2Value < 500)
+    if (co2_ppm >= 400 && co2_ppm <= 600) {
+        // Fresh air, no noticeable effects; matches outdoor levels.
         return AirQualityEnum::kGood;
-    else if (co2Value < 700)
+    } else if (co2_ppm <= 700) {
+        // Still very good, no perceptible impact; minor ventilation decline.
         return AirQualityEnum::kFair;
-    else if (co2Value < 800)
+    } else if (co2_ppm <= 800) {
+        // Suboptimal; sensitive individuals might notice slight stuffiness.
         return AirQualityEnum::kModerate;
-    else if (co2Value < 900)
+    } else if (co2_ppm <= 950) {
+        // Mild effects possible (e.g., reduced focus); ventilation clearly poor.
         return AirQualityEnum::kPoor;
-    else if (co2Value < 1000)
+    } else if (co2_ppm <= 1200) {
+        // Discomfort likely (e.g., stuffiness, drowsiness); significant air quality decline.
         return AirQualityEnum::kVeryPoor;
-    else
+    } else if (co2_ppm > 1200) {
+        // Potential health impacts (e.g., fatigue, headaches); unacceptable levels.
         return AirQualityEnum::kExtremelyPoor;
+    }
+    // Below 400 ppm or invalid readings; sensor error or uninitialized state.
+    return AirQualityEnum::kUnknown;
 }
 
 void MatterAirQuality::UpdateAirQualityAttributes(
