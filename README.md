@@ -1247,7 +1247,12 @@ void AddThreadNetworkDiagnosticsCluster(node_t* node)
     endpoint_t* root_endpoint = endpoint::get(node, 0);
 
     cluster::thread_network_diagnostics::config_t thread_network_config;
-    cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
+
+    cluster::thread_network_diagnostics::feature::error_counts::add(cluster);
+    cluster::thread_network_diagnostics::feature::mac_counts::add(cluster);
+    cluster::thread_network_diagnostics::feature::mle_counts::add(cluster);
+    cluster::thread_network_diagnostics::feature::packets_counts::add(cluster);
 }
 ```
 
