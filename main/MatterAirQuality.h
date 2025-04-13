@@ -1,0 +1,72 @@
+#pragma once
+
+#include <vector>
+#include <esp_matter.h>
+
+#include "AirQualitySensor.h"
+#include "MeasuredValues.h"
+
+using namespace esp_matter;
+using namespace esp_matter::endpoint;
+using namespace chip::app::Clusters::AirQuality;
+
+class MatterAirQuality
+{
+    public:
+
+        MatterAirQuality(AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint);
+
+        void CreateAirQualityEndpoint(node_t* node);
+        
+        void StartMeasurements();
+
+        void MeasureAirQuality();
+
+    private:
+
+        static constexpr uint32_t MEASUREMENT_SAMPLE_SECONDS = 60;
+        static constexpr uint32_t AVERAGE_MEASURED_VALUE_WINDOW_SIZE = 60;
+        static constexpr uint32_t AVERAGE_MEASURED_VALUE_WINDOW_SECONDS = AVERAGE_MEASURED_VALUE_WINDOW_SIZE * MEASUREMENT_SAMPLE_SECONDS;
+
+        endpoint_t* m_lightEndpoint;
+        endpoint_t* m_airQualityEndpoint;
+        AirQualitySensor* m_airQualitySensor;
+        esp_timer_handle_t m_timer_handle;
+        MeasuredValues m_measuredValues{AVERAGE_MEASURED_VALUE_WINDOW_SIZE};
+
+        void AddRelativeHumidityMeasurementCluster();
+
+        void AddTemperatureMeasurementCluster();
+
+        void AddCarbonDioxideConcentrationMeasurementCluster();
+
+        void AddPm1ConcentrationMeasurementCluster();
+
+        void AddPm25ConcentrationMeasurementCluster();
+
+        void AddPm10ConcentrationMeasurementCluster();
+
+        void AddNitrogenDioxideConcentrationMeasurementCluster();
+
+        void AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
+
+        void AddAirQualityClusterFeatures();
+
+        static void MeasureAirQualityTimerCallback(void *arg);
+
+        static void SetLightOnOff(endpoint_t* lightEndpoint, bool on);
+
+        static void SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent);
+
+        static void SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation);
+
+        static void SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality);
+
+        AirQualityEnum ClassifyAirQuality();
+
+        static void UpdateAirQualityAttributes(
+            endpoint_t* airQualityEndpoint,
+            endpoint_t* lightEndpoint,
+            MatterAirQuality* airQuality);
+
+};
