@@ -33,6 +33,10 @@ int SensirionSEN66::ReadMeasuredValues(MeasuredValues* measuredValues)
     &noxIndex,
     &co2);
 
+    if (status != NO_ERROR) {
+      return status;
+    }
+
     measuredValues->ParticulateMatter1p0 = particulateMatter1p0 / 10.0f;
     measuredValues->ParticulateMatter2p5 = particulateMatter2p5 / 10.0f;
     measuredValues->ParticulateMatter4p0 = particulateMatter4p0 / 10.0f;

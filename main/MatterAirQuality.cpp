@@ -132,12 +132,16 @@ static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id,
 
 void MatterAirQuality::AddRelativeHumidityMeasurementCluster()
 {
+    m_measurements.AddId(RelativeHumidityMeasurement::Id, 60.0, 60.0);
+
     esp_matter::cluster::relative_humidity_measurement::config_t relative_humidity_config;
     esp_matter::cluster::relative_humidity_measurement::create(m_airQualityEndpoint, &relative_humidity_config, CLUSTER_FLAG_SERVER);
 }
 
 void MatterAirQuality::AddTemperatureMeasurementCluster()
 {
+    m_measurements.AddId(TemperatureMeasurement::Id, 60.0, 60.0);
+
     // Add TemperatureMeasurement cluster
     cluster::temperature_measurement::config_t temperature_measurement;
     cluster::temperature_measurement::create(m_airQualityEndpoint, &temperature_measurement, CLUSTER_FLAG_SERVER);
@@ -145,6 +149,8 @@ void MatterAirQuality::AddTemperatureMeasurementCluster()
 
 void MatterAirQuality::AddCarbonDioxideConcentrationMeasurementCluster()
 {
+    m_measurements.AddId(CarbonDioxideConcentrationMeasurement::Id, 3600, 3600.0);
+
     cluster::carbon_dioxide_concentration_measurement::config_t co2_measurement;
     cluster_t* cluster = esp_matter::cluster::carbon_dioxide_concentration_measurement::create(m_airQualityEndpoint, &co2_measurement, CLUSTER_FLAG_SERVER);
     
@@ -160,7 +166,7 @@ void MatterAirQuality::AddCarbonDioxideConcentrationMeasurementCluster()
         m_airQualityEndpoint,
         CarbonDioxideConcentrationMeasurement::Id,
         CarbonDioxideConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
-        AVERAGE_MEASURED_VALUE_WINDOW_SECONDS 
+        m_measurements.GetAverageWindowSizeSeconds(CarbonDioxideConcentrationMeasurement::Id)  
     );
 
     // Set the MeasurementUnit to PPM
@@ -180,6 +186,8 @@ void MatterAirQuality::AddCarbonDioxideConcentrationMeasurementCluster()
 
 void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
 {
+    m_measurements.AddId(Pm1ConcentrationMeasurement::Id, 3600, 3600.0);
+
     esp_matter::cluster::pm1_concentration_measurement::config_t pm1_measurement;
     cluster_t* cluster = esp_matter::cluster::pm1_concentration_measurement::create(m_airQualityEndpoint, &pm1_measurement, CLUSTER_FLAG_SERVER);
 
@@ -195,7 +203,7 @@ void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
         m_airQualityEndpoint,
         Pm1ConcentrationMeasurement::Id,
         Pm1ConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
-        AVERAGE_MEASURED_VALUE_WINDOW_SECONDS 
+        m_measurements.GetAverageWindowSizeSeconds(Pm1ConcentrationMeasurement::Id) 
     );
 
     // Set the MeasurementUnit to Microgram per m3
@@ -215,6 +223,8 @@ void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
 
 void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
 {
+    m_measurements.AddId(Pm25ConcentrationMeasurement::Id, 3600, 3600.0);
+
     esp_matter::cluster::pm25_concentration_measurement::config_t pm25_measurement;
     cluster_t* cluster = esp_matter::cluster::pm25_concentration_measurement::create(m_airQualityEndpoint, &pm25_measurement, CLUSTER_FLAG_SERVER);
 
@@ -230,7 +240,7 @@ void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
         m_airQualityEndpoint,
         Pm25ConcentrationMeasurement::Id,
         Pm25ConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
-        AVERAGE_MEASURED_VALUE_WINDOW_SECONDS 
+        m_measurements.GetAverageWindowSizeSeconds(Pm25ConcentrationMeasurement::Id) 
     );
 
     // Set the MeasurementUnit to Microgram per m3
@@ -250,6 +260,8 @@ void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
 
 void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
 {
+    m_measurements.AddId(Pm10ConcentrationMeasurement::Id, 3600, 3600.0);
+
     esp_matter::cluster::pm10_concentration_measurement::config_t pm10_measurement;
     cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(m_airQualityEndpoint, &pm10_measurement, CLUSTER_FLAG_SERVER);
 
@@ -265,7 +277,7 @@ void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
         m_airQualityEndpoint,
         Pm10ConcentrationMeasurement::Id,
         Pm10ConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
-        AVERAGE_MEASURED_VALUE_WINDOW_SECONDS 
+        m_measurements.GetAverageWindowSizeSeconds(Pm10ConcentrationMeasurement::Id) 
     );
 
     // Set the MeasurementUnit to Microgram per m3
@@ -285,6 +297,8 @@ void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
 
 void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
 {
+    m_measurements.AddId(NitrogenDioxideConcentrationMeasurement::Id, 3600.0, 3600.0);
+
     esp_matter::cluster::nitrogen_dioxide_concentration_measurement::config_t nox_measurement;
     cluster_t* cluster = esp_matter::cluster::nitrogen_dioxide_concentration_measurement::create(m_airQualityEndpoint, &nox_measurement, CLUSTER_FLAG_SERVER);
 
@@ -300,7 +314,7 @@ void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
         m_airQualityEndpoint,
         NitrogenDioxideConcentrationMeasurement::Id,
         NitrogenDioxideConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
-        AVERAGE_MEASURED_VALUE_WINDOW_SECONDS 
+        m_measurements.GetAverageWindowSizeSeconds(NitrogenDioxideConcentrationMeasurement::Id)
     );
 
     // Set the MeasurementUnit to PPM
@@ -320,6 +334,8 @@ void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
 
 void MatterAirQuality::AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster()
 {
+    m_measurements.AddId(TotalVolatileOrganicCompoundsConcentrationMeasurement::Id, 3600.0, 3600.0);
+
     esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::config_t voc_measurement;
     cluster_t* cluster = esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::create(m_airQualityEndpoint, &voc_measurement, CLUSTER_FLAG_SERVER);
 
@@ -335,7 +351,7 @@ void MatterAirQuality::AddTotalVolatileOrganicCompoundsConcentrationMeasurementC
         m_airQualityEndpoint,
         TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
         TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
-        AVERAGE_MEASURED_VALUE_WINDOW_SECONDS 
+        m_measurements.GetAverageWindowSizeSeconds(TotalVolatileOrganicCompoundsConcentrationMeasurement::Id) 
     );
 
     // Set the MeasurementUnit to PPM
@@ -472,7 +488,7 @@ void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualit
 
 AirQualityEnum MatterAirQuality::ClassifyAirQuality()
 {
-    uint16_t co2_ppm = m_measuredValues.GetLatest(CarbonDioxideConcentrationMeasurement::Id);
+    uint16_t co2_ppm = m_measurements.GetLatest(CarbonDioxideConcentrationMeasurement::Id);
 
     if (co2_ppm >= 400 && co2_ppm <= 600) {
         // Fresh air, no noticeable effects; matches outdoor levels.
@@ -499,7 +515,7 @@ AirQualityEnum MatterAirQuality::ClassifyAirQuality()
 
 void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_t* lightEndpoint, MatterAirQuality* matterAirQuality)
 {
-    std::vector<uint32_t> clusterIds = matterAirQuality->m_measuredValues.GetIds();
+    std::vector<uint32_t> clusterIds = matterAirQuality->m_measurements.GetIds();
     for (uint32_t clusterId : clusterIds) {
         if (clusterId == RelativeHumidityMeasurement::Id)
         {
@@ -507,7 +523,7 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
                 airQualityEndpoint,
                 RelativeHumidityMeasurement::Id,
                 RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
-                matterAirQuality->m_measuredValues.GetLatest(clusterId) * 100);
+                matterAirQuality->m_measurements.GetLatest(clusterId) * 100);
         }
         else if (clusterId == TemperatureMeasurement::Id)
         {
@@ -515,7 +531,7 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
                 airQualityEndpoint,
                 TemperatureMeasurement::Id,
                 TemperatureMeasurement::Attributes::MeasuredValue::Id,
-                matterAirQuality->m_measuredValues.GetLatest(clusterId) * 100);        
+                matterAirQuality->m_measurements.GetLatest(clusterId) * 100);        
         }
         else
         {
@@ -523,13 +539,13 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
                 airQualityEndpoint,
                 clusterId,
                 0x0000, // Measured Value
-                matterAirQuality->m_measuredValues.GetLatest(clusterId));
+                matterAirQuality->m_measurements.GetLatest(clusterId));
     
             UpdateAttributeValueFloat(
                 airQualityEndpoint,
                 clusterId,
                 0x0005, // Average Measured Value
-                matterAirQuality->m_measuredValues.GetAverage(clusterId));
+                matterAirQuality->m_measurements.GetAverage(clusterId));
         }
     }
 
@@ -551,6 +567,10 @@ void MatterAirQuality::MeasureAirQuality()
     AirQualitySensor::MeasuredValues* measuredValues = new AirQualitySensor::MeasuredValues();
 
     int status = sensor->ReadMeasuredValues(measuredValues);
+    if (status != NO_ERROR) {
+        ESP_LOGE(TAG, "MeasureAirQuality: sensor->ReadMeasuredValues failed with status=%d", status);
+        return;    
+    };
 
     ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: AmbientHumidity: %f", measuredValues->AmbientHumidity);
     ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: AmbientTemperature: %f", measuredValues->AmbientTemperature);
@@ -561,45 +581,44 @@ void MatterAirQuality::MeasureAirQuality()
     ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM2.5: %f", measuredValues->ParticulateMatter2p5);
     ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM10: %f", measuredValues->ParticulateMatter10p0);
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         RelativeHumidityMeasurement::Id,
         measuredValues->AmbientHumidity
     );
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         TemperatureMeasurement::Id,
         measuredValues->AmbientTemperature
     );
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         CarbonDioxideConcentrationMeasurement::Id,
         measuredValues->CO2
     );
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
         measuredValues->VOCIndex
     );
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         NitrogenDioxideConcentrationMeasurement::Id,
         measuredValues->NOxIndex);
 
-        m_measuredValues.AddMeasurement(
-        Pm1ConcentrationMeasurement::Id,
-        measuredValues->ParticulateMatter1p0
+    m_measurements.AddMeasurementNow(
+    Pm1ConcentrationMeasurement::Id,
+    measuredValues->ParticulateMatter1p0
     );
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         Pm25ConcentrationMeasurement::Id,
         measuredValues->ParticulateMatter2p5
     );
 
-    m_measuredValues.AddMeasurement(
+    m_measurements.AddMeasurementNow(
         Pm10ConcentrationMeasurement::Id,
         measuredValues->ParticulateMatter10p0
     );
-
 }
 
 // Timer callback to measure air quality

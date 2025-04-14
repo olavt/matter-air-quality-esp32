@@ -1,40 +1,80 @@
 #include "MeasuredValues.h"
+#include <deque>
+#include <algorithm>
+#include <stdexcept>
 
-MeasuredValues::MeasuredValues(size_t maxBufferSize)
-    : m_maxBufferSize(maxBufferSize)
+MeasuredValues::MeasuredValues(uint32_t id, size_t averageWindowSizeSeconds, size_t peakWindowSizeSeconds)
+    : m_id(id)
+    , m_averageWindowSizeSeconds(averageWindowSizeSeconds)
+    , m_peakWindowSizeSeconds(peakWindowSizeSeconds)
+    , m_latestValue(0.0f)
 {
 }
 
-void MeasuredValues::AddMeasurement(uint32_t id, float value)
+void MeasuredValues::Add(float value, float elapsedTimeSeconds)
 {
-    auto [it, inserted] = m_measurements.emplace(id, MeasurementBuffer(m_maxBufferSize));
-    it->second.AddMeasurement(value);
-}
+    // Store the new measurement with its timestamp
+    m_measurements.emplace_back(value, elapsedTimeSeconds);
+    m_latestValue = value;
 
-float MeasuredValues::GetLatest(uint32_t id)
-{
-    auto it = m_measurements.find(id);
-    if (it == m_measurements.end()) {
-        return 0.0f;  // Return 0 if no measurements exist for this substance
+    // Remove measurements outside the larger of the two windows
+    float oldestRelevantTime = elapsedTimeSeconds - std::max(m_averageWindowSizeSeconds, m_peakWindowSizeSeconds);
+    while (!m_measurements.empty() && m_measurements.front().second < oldestRelevantTime) {
+        m_measurements.pop_front();
     }
-    return it->second.GetLatest();
 }
 
-float MeasuredValues::GetAverage(uint32_t id)
+float MeasuredValues::GetLatest()
 {
-    auto it = m_measurements.find(id);
-    if (it == m_measurements.end()) {
-        return 0.0f;  // Return 0 if no measurements exist for this substance
-    }
-    return it->second.GetAverage();
+    return m_latestValue;
 }
 
-std::vector<uint32_t> MeasuredValues::GetIds() const
+float MeasuredValues::GetAverage()
 {
-    std::vector<uint32_t> ids;
-    ids.reserve(m_measurements.size()); // Optional: optimize by reserving space
-    for (const auto& pair : m_measurements) {
-        ids.push_back(pair.first);
+    if (m_measurements.empty()) {
+        return 0.0f;
     }
-    return ids;
+
+    float sum = 0.0f;
+    size_t count = 0;
+    float minTime = m_measurements.back().second - m_averageWindowSizeSeconds;
+
+    // Sum values within the average window
+    for (const auto& measurement : m_measurements) {
+        if (measurement.second >= minTime) {
+            sum += measurement.first;
+            count++;
+        }
+    }
+
+    return count > 0 ? sum / count : 0.0f;
+}
+
+size_t MeasuredValues::GetAverageWindowSizeSeconds()
+{
+    return m_averageWindowSizeSeconds;
+}
+
+float MeasuredValues::GetPeak()
+{
+    if (m_measurements.empty()) {
+        return 0.0f;
+    }
+
+    float peak = m_measurements.back().first;
+    float minTime = m_measurements.back().second - m_peakWindowSizeSeconds;
+
+    // Find max value within the peak window
+    for (const auto& measurement : m_measurements) {
+        if (measurement.second >= minTime) {
+            peak = std::max(peak, measurement.first);
+        }
+    }
+
+    return peak;
+}
+
+size_t MeasuredValues::GetPeakWindowSizeSeconds()
+{
+    return m_peakWindowSizeSeconds;
 }

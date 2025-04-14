@@ -4,7 +4,7 @@
 #include <esp_matter.h>
 
 #include "AirQualitySensor.h"
-#include "MeasuredValues.h"
+#include "Measurements.h"
 
 using namespace esp_matter;
 using namespace esp_matter::endpoint;
@@ -25,14 +25,12 @@ class MatterAirQuality
     private:
 
         static constexpr uint32_t MEASUREMENT_SAMPLE_SECONDS = 60;
-        static constexpr uint32_t AVERAGE_MEASURED_VALUE_WINDOW_SIZE = 60;
-        static constexpr uint32_t AVERAGE_MEASURED_VALUE_WINDOW_SECONDS = AVERAGE_MEASURED_VALUE_WINDOW_SIZE * MEASUREMENT_SAMPLE_SECONDS;
 
         endpoint_t* m_lightEndpoint;
         endpoint_t* m_airQualityEndpoint;
         AirQualitySensor* m_airQualitySensor;
         esp_timer_handle_t m_timer_handle;
-        MeasuredValues m_measuredValues{AVERAGE_MEASURED_VALUE_WINDOW_SIZE};
+        Measurements m_measurements;
 
         void AddRelativeHumidityMeasurementCluster();
 

@@ -1,25 +1,31 @@
 #pragma once
 #include <stdint.h>
-#include <unordered_map>
-#include <vector>
-#include "MeasurementBuffer.h"
+#include <deque>
 
 class MeasuredValues
 {
-
 public:
+    MeasuredValues(uint32_t id, size_t averageWindowSizeSeconds, size_t peakWindowSizeSeconds);
 
-    MeasuredValues(size_t maxBufferSize);
+    void Add(float value, float elapsedTimeSeconds);
 
-    void AddMeasurement(uint32_t id, float value);
+    // Return the most recent measurement as a single-precision floating-point number.
+    float GetLatest();
 
-    float GetLatest(uint32_t id);
+    // Return the average value of MeasuredValue that has been measured during the averageWindowSizeSeconds.
+    float GetAverage();
 
-    float GetAverage(uint32_t id);
+    size_t GetAverageWindowSizeSeconds();
 
-    std::vector<uint32_t> GetIds() const;
+    // Return the maximum value of MeasuredValue that has been measured during the peakWindowSizeSeconds.
+    float GetPeak();
+
+    size_t GetPeakWindowSizeSeconds();
 
 private:
-    size_t m_maxBufferSize;
-    std::unordered_map<uint32_t, MeasurementBuffer> m_measurements;
+    uint32_t m_id;
+    size_t m_averageWindowSizeSeconds;
+    size_t m_peakWindowSizeSeconds;
+    float m_latestValue;
+    std::deque<std::pair<float, float>> m_measurements; // Stores (value, elapsedTimeSeconds)
 };
