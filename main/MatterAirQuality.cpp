@@ -169,6 +169,17 @@ void MatterAirQuality::AddCarbonDioxideConcentrationMeasurementCluster()
         m_measurements.GetAverageWindowSizeSeconds(CarbonDioxideConcentrationMeasurement::Id)  
     );
 
+    // Add the PeakMeasurement (PEA) Feature flag
+    cluster::carbon_dioxide_concentration_measurement::feature::peak_measurement::config_t peak_measurement_config;
+    cluster::carbon_dioxide_concentration_measurement::feature::peak_measurement::add(cluster, &peak_measurement_config);
+
+    UpdateAttributeValueUInt32(
+        m_airQualityEndpoint,
+        CarbonDioxideConcentrationMeasurement::Id,
+        CarbonDioxideConcentrationMeasurement::Attributes::PeakMeasuredValueWindow::Id,
+        m_measurements.GetPeakWindowSizeSeconds(CarbonDioxideConcentrationMeasurement::Id)  
+    );
+
     // Set the MeasurementUnit to PPM
     UpdateAttributeValueUInt8(
         m_airQualityEndpoint,
@@ -206,6 +217,17 @@ void MatterAirQuality::AddPm1ConcentrationMeasurementCluster()
         m_measurements.GetAverageWindowSizeSeconds(Pm1ConcentrationMeasurement::Id) 
     );
 
+    // Add the PeakMeasurement (PEA) Feature flag
+    cluster::pm1_concentration_measurement::feature::peak_measurement::config_t peak_measurement_config;
+    cluster::pm1_concentration_measurement::feature::peak_measurement::add(cluster, &peak_measurement_config);
+
+    UpdateAttributeValueUInt32(
+        m_airQualityEndpoint,
+        Pm1ConcentrationMeasurement::Id,
+        Pm1ConcentrationMeasurement::Attributes::PeakMeasuredValueWindow::Id,
+        m_measurements.GetPeakWindowSizeSeconds(Pm1ConcentrationMeasurement::Id)  
+    );
+
     // Set the MeasurementUnit to Microgram per m3
     UpdateAttributeValueUInt8(
         m_airQualityEndpoint,
@@ -241,7 +263,18 @@ void MatterAirQuality::AddPm25ConcentrationMeasurementCluster()
         Pm25ConcentrationMeasurement::Id,
         Pm25ConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
         m_measurements.GetAverageWindowSizeSeconds(Pm25ConcentrationMeasurement::Id) 
-    );
+    );    
+
+    // Add the PeakMeasurement (PEA) Feature flag
+    cluster::pm25_concentration_measurement::feature::peak_measurement::config_t peak_measurement_config;
+    cluster::pm25_concentration_measurement::feature::peak_measurement::add(cluster, &peak_measurement_config);
+
+    UpdateAttributeValueUInt32(
+        m_airQualityEndpoint,
+        Pm25ConcentrationMeasurement::Id,
+        Pm25ConcentrationMeasurement::Attributes::PeakMeasuredValueWindow::Id,
+        m_measurements.GetPeakWindowSizeSeconds(Pm25ConcentrationMeasurement::Id)  
+    );    
 
     // Set the MeasurementUnit to Microgram per m3
     UpdateAttributeValueUInt8(
@@ -273,12 +306,24 @@ void MatterAirQuality::AddPm10ConcentrationMeasurementCluster()
     cluster::pm10_concentration_measurement::feature::average_measurement::config_t average_measurement_config;
     cluster::pm10_concentration_measurement::feature::average_measurement::add(cluster, &average_measurement_config);
 
+
     UpdateAttributeValueUInt32(
         m_airQualityEndpoint,
         Pm10ConcentrationMeasurement::Id,
         Pm10ConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
         m_measurements.GetAverageWindowSizeSeconds(Pm10ConcentrationMeasurement::Id) 
     );
+
+    // Add the PeakMeasurement (PEA) Feature flag
+    cluster::pm10_concentration_measurement::feature::peak_measurement::config_t peak_measurement_config;
+    cluster::pm10_concentration_measurement::feature::peak_measurement::add(cluster, &peak_measurement_config);
+
+    UpdateAttributeValueUInt32(
+        m_airQualityEndpoint,
+        Pm10ConcentrationMeasurement::Id,
+        Pm10ConcentrationMeasurement::Attributes::PeakMeasuredValueWindow::Id,
+        m_measurements.GetPeakWindowSizeSeconds(Pm10ConcentrationMeasurement::Id)  
+    ); 
 
     // Set the MeasurementUnit to Microgram per m3
     UpdateAttributeValueUInt8(
@@ -317,6 +362,17 @@ void MatterAirQuality::AddNitrogenDioxideConcentrationMeasurementCluster()
         m_measurements.GetAverageWindowSizeSeconds(NitrogenDioxideConcentrationMeasurement::Id)
     );
 
+    // Add the PeakMeasurement (PEA) Feature flag
+    cluster::nitrogen_dioxide_concentration_measurement::feature::peak_measurement::config_t peak_measurement_config;
+    cluster::nitrogen_dioxide_concentration_measurement::feature::peak_measurement::add(cluster, &peak_measurement_config);
+
+    UpdateAttributeValueUInt32(
+        m_airQualityEndpoint,
+        NitrogenDioxideConcentrationMeasurement::Id,
+        NitrogenDioxideConcentrationMeasurement::Attributes::PeakMeasuredValueWindow::Id,
+        m_measurements.GetPeakWindowSizeSeconds(NitrogenDioxideConcentrationMeasurement::Id)  
+    );
+
     // Set the MeasurementUnit to PPM
     UpdateAttributeValueUInt8(
         m_airQualityEndpoint,
@@ -353,6 +409,17 @@ void MatterAirQuality::AddTotalVolatileOrganicCompoundsConcentrationMeasurementC
         TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::AverageMeasuredValueWindow::Id,
         m_measurements.GetAverageWindowSizeSeconds(TotalVolatileOrganicCompoundsConcentrationMeasurement::Id) 
     );
+
+    // Add the PeakMeasurement (PEA) Feature flag
+    cluster::total_volatile_organic_compounds_concentration_measurement::feature::peak_measurement::config_t peak_measurement_config;
+    cluster::total_volatile_organic_compounds_concentration_measurement::feature::peak_measurement::add(cluster, &peak_measurement_config);
+
+    UpdateAttributeValueUInt32(
+        m_airQualityEndpoint,
+        TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
+        TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::PeakMeasuredValueWindow::Id,
+        m_measurements.GetPeakWindowSizeSeconds(TotalVolatileOrganicCompoundsConcentrationMeasurement::Id)  
+    ); 
 
     // Set the MeasurementUnit to PPM
     UpdateAttributeValueUInt8(
@@ -546,6 +613,12 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
                 clusterId,
                 0x0005, // Average Measured Value
                 matterAirQuality->m_measurements.GetAverage(clusterId));
+
+            UpdateAttributeValueFloat(
+                airQualityEndpoint,
+                clusterId,
+                0x0003, // Peak Measured Value
+                matterAirQuality->m_measurements.GetPeak(clusterId));
         }
     }
 

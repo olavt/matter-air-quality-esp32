@@ -214,9 +214,23 @@ void AddThreadNetworkDiagnosticsCluster(node_t* node)
     cluster_t* cluster = cluster::thread_network_diagnostics::create(root_endpoint, &thread_network_config, CLUSTER_FLAG_SERVER);
 
     cluster::thread_network_diagnostics::feature::error_counts::add(cluster);
-    cluster::thread_network_diagnostics::feature::mac_counts::add(cluster);
-    cluster::thread_network_diagnostics::feature::mle_counts::add(cluster);
+
+    // PacketCounts
     cluster::thread_network_diagnostics::feature::packets_counts::add(cluster);
+
+    // MLECounts
+    cluster::thread_network_diagnostics::feature::mle_counts::add(cluster);
+    attribute::create(cluster, ThreadNetworkDiagnostics::Attributes::ChildRoleCount::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY, esp_matter_uint16(0));
+    attribute::create(cluster, ThreadNetworkDiagnostics::Attributes::LeaderRoleCount::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY, esp_matter_uint16(0));
+    attribute::create(cluster, ThreadNetworkDiagnostics::Attributes::RouterRoleCount::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY, esp_matter_uint16(0));
+
+    // MACCounts
+    cluster::thread_network_diagnostics::feature::mac_counts::add(cluster);
+    attribute::create(cluster, ThreadNetworkDiagnostics::Attributes::RxTotalCount::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY, esp_matter_uint32(0));
+    attribute::create(cluster, ThreadNetworkDiagnostics::Attributes::TxTotalCount::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY, esp_matter_uint32(0));
+
+    //attribute::thread_network_diagnostics::create_detached_role_count(cluster, 0);
+    //esp_matter::attribute::thread_network_diagnostics::create_detached_role_count(cluster, 0);
 }
 
 void AddColorControlClusterFeatures(endpoint_t* endpoint)
