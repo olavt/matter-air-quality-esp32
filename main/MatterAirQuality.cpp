@@ -553,7 +553,7 @@ void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualit
     SetLightLevelPercent(lightEndpoint, level);   
 }
 
-AirQualityEnum MatterAirQuality::ClassifyAirQuality()
+AirQualityEnum MatterAirQuality::ClassifyAirQualityByCO2()
 {
     uint16_t co2_ppm = m_measurements.GetLatest(CarbonDioxideConcentrationMeasurement::Id);
 
@@ -578,6 +578,44 @@ AirQualityEnum MatterAirQuality::ClassifyAirQuality()
     }
     // Below 400 ppm or invalid readings; sensor error or uninitialized state.
     return AirQualityEnum::kUnknown;
+}
+
+AirQualityEnum MatterAirQuality::ClassifyAirQualityByPM10()
+{
+    uint16_t pm10 = m_measurements.GetAverage(Pm10ConcentrationMeasurement::Id);
+
+    if (pm10 <= 30.0) {
+        return AirQualityEnum::kGood;
+    } else if (pm10 <= 60.0) {
+        return AirQualityEnum::kFair;
+    } else if (pm10 <= 120.0) {
+        return AirQualityEnum::kModerate;
+    } else if (pm10 <= 260.0) {
+        return AirQualityEnum::kPoor;
+    } else if (pm10 <= 400) {
+        return AirQualityEnum::kVeryPoor;
+    } else {
+        return AirQualityEnum::kExtremelyPoor;
+    }
+}
+
+AirQualityEnum MatterAirQuality::ClassifyAirQualityByPM25()
+{
+    uint16_t pm25 = m_measurements.GetAverage(Pm25ConcentrationMeasurement::Id);
+
+    if (pm25 <= 15.0) {
+        return AirQualityEnum::kGood;
+    } else if (pm25 <= 30.0) {
+        return AirQualityEnum::kFair;
+    } else if (pm25 <= 50.0) {
+        return AirQualityEnum::kModerate;
+    } else if (pm25 <= 100.0) {
+        return AirQualityEnum::kPoor;
+    } else if (pm25 <= 150.0) {
+        return AirQualityEnum::kVeryPoor;
+    } else {
+        return AirQualityEnum::kExtremelyPoor;
+    }
 }
 
 void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_t* lightEndpoint, MatterAirQuality* matterAirQuality)
@@ -622,7 +660,12 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
         }
     }
 
-    AirQualityEnum airQuality = matterAirQuality->ClassifyAirQuality();
+    AirQualityEnum airQualityCO2 = matterAirQuality->ClassifyAirQualityByCO2();
+    AirQualityEnum airQualityPM25 = matterAirQuality->ClassifyAirQualityByPM25();
+    AirQualityEnum airQualityPM10 = matterAirQuality->ClassifyAirQualityByPM10();
+
+    // Use the worst air quality from CO2, PM2.5, and PM10
+    AirQualityEnum airQuality = std::max({airQualityCO2, airQualityPM25, airQualityPM10});
     
     UpdateAttributeValueInt16(
         airQualityEndpoint,

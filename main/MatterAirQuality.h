@@ -60,7 +60,11 @@ class MatterAirQuality
 
         static void SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality);
 
-        AirQualityEnum ClassifyAirQuality();
+        AirQualityEnum ClassifyAirQualityByCO2();
+
+        AirQualityEnum ClassifyAirQualityByPM10();
+
+        AirQualityEnum ClassifyAirQualityByPM25();
 
         static void UpdateAirQualityAttributes(
             endpoint_t* airQualityEndpoint,

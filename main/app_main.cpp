@@ -196,14 +196,9 @@ void AddSoftwareDiagnosticsCluster(node_t* node)
     uint32_t features = cluster::software_diagnostics::feature::watermarks::get_id();
     cluster_t* cluster = cluster::software_diagnostics::create(root_endpoint, &config, CLUSTER_FLAG_SERVER, features);
 
-    // TBD: create functions does not exist for these attributes in the esp-matter SDK yet.
-    // Check if implemented in later versions.
-    attribute::create(cluster, SoftwareDiagnostics::Attributes::CurrentHeapFree::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
-        esp_matter_uint64(0));
-    attribute::create(cluster, SoftwareDiagnostics::Attributes::CurrentHeapUsed::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
-        esp_matter_uint64(0));
-    attribute::create(cluster, SoftwareDiagnostics::Attributes::ThreadMetrics::Id, ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
-        esp_matter_array(nullptr, 0, 0));
+    esp_matter::cluster::software_diagnostics::attribute::create_current_heap_free(cluster, 0);
+    esp_matter::cluster::software_diagnostics::attribute::create_current_heap_used(cluster, 0);
+    esp_matter::cluster::software_diagnostics::attribute::create_thread_metrics(cluster, nullptr, 0, 0);
 }
 
 void AddThreadNetworkDiagnosticsCluster(node_t* node)
@@ -229,9 +224,6 @@ void AddThreadNetworkDiagnosticsCluster(node_t* node)
     cluster::thread_network_diagnostics::feature::mac_counts::add(cluster);
     esp_matter::cluster::thread_network_diagnostics::attribute::create_rx_total_count(cluster, 0);
     esp_matter::cluster::thread_network_diagnostics::attribute::create_tx_total_count(cluster, 0);
-
-    //attribute::thread_network_diagnostics::create_detached_role_count(cluster, 0);
-    //esp_matter::cluster::thread_network_diagnostics::attribute::create_detached_role_count(cluster, 0);
 
     esp_matter::cluster::thread_network_diagnostics::attribute::create_rloc16(cluster, 0);
 }
