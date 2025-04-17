@@ -226,6 +226,20 @@ void AddThreadNetworkDiagnosticsCluster(node_t* node)
     esp_matter::cluster::thread_network_diagnostics::attribute::create_rloc16(cluster, 0);
 }
 
+void AddWiFidNetworkDiagnosticsCluster(node_t* node)
+{
+    endpoint_t* root_endpoint = endpoint::get(node, 0);
+
+    cluster::wifi_network_diagnostics::config_t cluster_config;
+    cluster_t* cluster = cluster::wifi_network_diagnostics::create(root_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+
+    // ErrorCounts (ERRCNT)
+    cluster::wifi_network_diagnostics::feature::error_counts::add(cluster);
+
+    // PacketCounts (PKTCNT)
+    cluster::wifi_network_diagnostics::feature::packets_counts::add(cluster);
+}
+
 void AddColorControlClusterFeatures(endpoint_t* endpoint)
 {
     cluster_t *cluster = cluster::get(endpoint, ColorControl::Id);
@@ -317,6 +331,10 @@ extern "C" void app_main()
     set_openthread_platform_config(&config);
 
     AddThreadNetworkDiagnosticsCluster(node);
+#endif
+
+#if CHIP_DEVICE_CONFIG_ENABLE_WIFI_STATION
+    AddWiFidNetworkDiagnosticsCluster(node);
 #endif
 
 #ifdef CONFIG_ENABLE_SET_CERT_DECLARATION_API
