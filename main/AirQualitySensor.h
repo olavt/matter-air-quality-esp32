@@ -19,16 +19,25 @@ public:
     float CO2 = 0;
   };
 
-    // Virtual destructor (important for proper cleanup in inheritance)
-    virtual ~AirQualitySensor() = default;
+  // Constructor
+  AirQualitySensor(float sensorAltitude = 0.0f)
+      : m_sensorAltitude(sensorAltitude)
+  {
+  }
 
-    // Pure virtual functions (abstract methods)
-    virtual void Init() = 0;
-    
-    virtual int ReadMeasuredValues(MeasuredValues* measuredValues) = 0;
-    
-    virtual int SetSensorAltitude(float altitude) = 0;
-    
-    virtual int StartContiniousMeasurement() = 0;
+  // Virtual destructor (important for proper cleanup in inheritance)
+  virtual ~AirQualitySensor() = default;
+
+  virtual void Init();
+
+  virtual int ReadMeasuredValues(MeasuredValues* measuredValues) = 0;
+
+  virtual int StartContinuousMeasurement() = 0;
+
+private:
+
+  virtual int SetSensorAltitude(float sensorAltitude) = 0;
+
+  float m_sensorAltitude;
 
 };

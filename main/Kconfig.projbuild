@@ -1,0 +1,15 @@
+menu "SEN66 I2C Configuration"
+
+    config SEN66_I2C_SDA_PIN
+        int "I2C SDA Pin"
+        default 6
+        help
+            GPIO number for I2C master data
+
+    config SEN66_I2C_SCL_PIN
+        int "I2C SCL Pin"
+        default 7
+        help
+            GPIO number for I2C master clock
+
+endmenu

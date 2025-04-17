@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-MeasuredValues::MeasuredValues(uint32_t id, size_t averageWindowSizeSeconds, size_t peakWindowSizeSeconds)
+MeasuredValues::MeasuredValues(uint32_t id, uint32_t averageWindowSizeSeconds, uint32_t peakWindowSizeSeconds)
     : m_id(id)
     , m_averageWindowSizeSeconds(averageWindowSizeSeconds)
     , m_peakWindowSizeSeconds(peakWindowSizeSeconds)
@@ -50,7 +50,7 @@ float MeasuredValues::GetAverage()
     return count > 0 ? sum / count : 0.0f;
 }
 
-size_t MeasuredValues::GetAverageWindowSizeSeconds()
+uint32_t MeasuredValues::GetAverageWindowSizeSeconds()
 {
     return m_averageWindowSizeSeconds;
 }
@@ -74,7 +74,7 @@ float MeasuredValues::GetPeak()
     return peak;
 }
 
-size_t MeasuredValues::GetPeakWindowSizeSeconds()
+uint32_t MeasuredValues::GetPeakWindowSizeSeconds()
 {
     return m_peakWindowSizeSeconds;
 }

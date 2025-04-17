@@ -156,8 +156,6 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
 {
     esp_err_t err = ESP_OK;
 
-    //ESP_LOGI(TAG, "app_attribute_update_cb: type=%d endpoint_id=%d cluster_id=%lu, attribute_id=%lu", type, endpoint_id, cluster_id, attribute_id);
-
     if (type == PRE_UPDATE) {
         /* Driver update */
         app_driver_handle_t driver_handle = (app_driver_handle_t)priv_data;
@@ -265,8 +263,6 @@ extern "C" void app_main()
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
 
-    ConfigureGeneralDiagnosticsCluster(node);
-
     extended_color_light::config_t light_config;
     light_config.on_off.on_off = DEFAULT_POWER;
     light_config.on_off.lighting.start_up_on_off = nullptr;
@@ -281,13 +277,14 @@ extern "C" void app_main()
     endpoint_t *endpoint = extended_color_light::create(node, &light_config, ENDPOINT_FLAG_NONE, light_handle);
     ABORT_APP_ON_FAILURE(endpoint != nullptr, ESP_LOGE(TAG, "Failed to create extended color light endpoint"));
 
-    AddColorControlClusterFeatures(endpoint);
-    AddSoftwareDiagnosticsCluster(node);
-
     light_endpoint_id = endpoint::get_id(endpoint);
     ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
 
-    AirQualitySensor* airQualitySensor = new SensirionSEN66();
+    ConfigureGeneralDiagnosticsCluster(node);
+    AddColorControlClusterFeatures(endpoint);
+    //AddSoftwareDiagnosticsCluster(node);
+
+    AirQualitySensor* airQualitySensor = new SensirionSEN66(610.0f);
     matterAirQuality = new MatterAirQuality(airQualitySensor, endpoint);
     matterAirQuality->CreateAirQualityEndpoint(node);
 
@@ -308,6 +305,7 @@ extern "C" void app_main()
     endpoint = endpoint::secondary_network_interface::create(node, &secondary_network_interface_config, ENDPOINT_FLAG_NONE, nullptr);
     ABORT_APP_ON_FAILURE(endpoint != nullptr, ESP_LOGE(TAG, "Failed to create secondary network interface endpoint"));
 #endif
+
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     /* Set OpenThread platform config */
@@ -353,5 +351,4 @@ extern "C" void app_main()
 #endif
     esp_matter::console::init();
 #endif
-
 }

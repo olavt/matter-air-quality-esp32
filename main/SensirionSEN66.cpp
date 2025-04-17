@@ -8,6 +8,8 @@ void SensirionSEN66::Init()
 {
   sensirion_i2c_hal_init();
   sen66_init(SEN66_I2C_ADDR_6B);
+
+  AirQualitySensor::Init();
 }
 
 int SensirionSEN66::ReadMeasuredValues(MeasuredValues* measuredValues)
@@ -56,7 +58,7 @@ int SensirionSEN66::SetSensorAltitude(float altitude)
   return status;
 }
 
-int SensirionSEN66::StartContiniousMeasurement()
+int SensirionSEN66::StartContinuousMeasurement()
 {
   int16_t status = sen66_start_continuous_measurement();
 

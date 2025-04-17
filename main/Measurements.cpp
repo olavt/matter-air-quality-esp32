@@ -7,7 +7,7 @@ float getElapsedSeconds()
     return static_cast<float>(esp_timer_get_time()) / 1000000.0f;
 }
 
-void Measurements::AddId(uint32_t id, size_t averageWindowSizeSeconds, size_t peakWindowSizeSeconds)
+void Measurements::AddId(uint32_t id, uint32_t averageWindowSizeSeconds, uint32_t peakWindowSizeSeconds)
 {
     m_measurements.emplace(id, MeasuredValues(id, averageWindowSizeSeconds, peakWindowSizeSeconds));
 }
@@ -35,7 +35,7 @@ float Measurements::GetAverage(uint32_t id)
     return it->second.GetAverage();
 }
 
-size_t Measurements::GetAverageWindowSizeSeconds(uint32_t id)
+uint32_t Measurements::GetAverageWindowSizeSeconds(uint32_t id)
 {
     auto it = m_measurements.find(id);
     return it->second.GetAverageWindowSizeSeconds();
@@ -47,7 +47,7 @@ float Measurements::GetPeak(uint32_t id)
     return it->second.GetPeak();
 }
 
-size_t Measurements::GetPeakWindowSizeSeconds(uint32_t id)
+uint32_t Measurements::GetPeakWindowSizeSeconds(uint32_t id)
 {
     auto it = m_measurements.find(id);
     return it->second.GetPeakWindowSizeSeconds();
