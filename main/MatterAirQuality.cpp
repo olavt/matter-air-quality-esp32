@@ -102,14 +102,14 @@ static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id,
     esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-//static void UpdateAttributeValueUInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint16_t value)
-//{
-//    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-//
-//    esp_matter_attr_val_t val = esp_matter_uint16(value);
-//
-//    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-//}
+static void UpdateAttributeValueUInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint16_t value)
+{
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+
+    esp_matter_attr_val_t val = esp_matter_uint16(value);
+
+    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+}
 
 static void UpdateAttributeValueUInt32(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint32_t value)
 {
@@ -367,36 +367,36 @@ void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualit
 {
     uint8_t saturation = 254; // Full saturation for vivid colors. Note! 255 is reserved and should not be used.
     uint8_t hue = 0;
-    float level = 0.0;
+    float lightLevelPercent = 0.0;
 
     switch (airQuality) {
         case AirQuality::AirQualityEnum::kGood:
             hue = HueDegreesToUInt8(120.0); // Green
-            level = 10.0;
+            lightLevelPercent = 10.0;
             break;
         case AirQuality::AirQualityEnum::kFair:
             hue = HueDegreesToUInt8(100.0); // Green-yellow
-            level = 10.0;
+            lightLevelPercent = 10.0;
             break;
         case AirQuality::AirQualityEnum::kModerate:
             hue = HueDegreesToUInt8(80.0);  // Yellow-green (~80°)
-            level = 15.0;
+            lightLevelPercent = 15.0;
             break;
         case AirQuality::AirQualityEnum::kPoor:
             hue = HueDegreesToUInt8(60.0);  // Yellow
-            level = 15.0;
+            lightLevelPercent = 15.0;
             break;
         case AirQuality::AirQualityEnum::kVeryPoor:
             hue = HueDegreesToUInt8(30.0);  // Orange
-            level = 20.0;
+            lightLevelPercent = 20.0;
             break;
         case AirQuality::AirQualityEnum::kExtremelyPoor:
             hue = HueDegreesToUInt8(0.0);   // Red
-            level = 30.0;
+            lightLevelPercent = 30.0;
             break;
         case AirQuality::AirQualityEnum::kUnknown:
             hue = 0;     // Neutral (could also reduce saturation)
-            level = 0.0; // Off
+            lightLevelPercent = 0.0; // Off
             break;
         default:
             ESP_LOGE(TAG, "Unknown air quality enum value");
@@ -405,7 +405,7 @@ void MatterAirQuality::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualit
     
     SetLightOnOff(lightEndpoint, true);
     SetLightColorHSV(lightEndpoint, hue, saturation);
-    SetLightLevelPercent(lightEndpoint, level);   
+    SetLightLevelPercent(lightEndpoint, lightLevelPercent);   
 }
 
 AirQualityEnum MatterAirQuality::ClassifyAirQualityByCO2()
