@@ -1,43 +1,58 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
+#include <set>
+#include <vector>
+
 class AirQualitySensor
 {
 public:
+    // Enum to define all possible measurement types
+    enum class MeasurementType {
+        ParticulateMatter1p0,
+        ParticulateMatter2p5,
+        ParticulateMatter4p0,
+        ParticulateMatter10p0,
+        AmbientHumidity,
+        AmbientTemperature,
+        VOCIndex,
+        NOxIndex,
+        CO2
+    };
 
-  class MeasuredValues
-  {
-  public:
+    // Struct to hold a single measurement value and its type
+    struct Measurement {
+        MeasurementType type;
+        float value;
+    };
 
-    float ParticulateMatter1p0 = 0;
-    float ParticulateMatter2p5 = 0;
-    float ParticulateMatter4p0 = 0;
-    float ParticulateMatter10p0 = 0;
-    float AmbientHumidity = 0;
-    float AmbientTemperature = 0;
-    float VOCIndex = 0;
-    float NOxIndex = 0;
-    float CO2 = 0;
-  };
+    // Constructor
+    explicit AirQualitySensor(float sensorAltitude = 0.0f)
+        : m_sensorAltitude(sensorAltitude)
+    {
+    }
 
-  // Constructor
-  AirQualitySensor(float sensorAltitude = 0.0f)
-      : m_sensorAltitude(sensorAltitude)
-  {
-  }
+    // Virtual destructor for proper cleanup
+    virtual ~AirQualitySensor() = default;
 
-  // Virtual destructor (important for proper cleanup in inheritance)
-  virtual ~AirQualitySensor() = default;
+    // Initialize the sensor
+    virtual void Init() = 0;
 
-  virtual void Init();
+    // Get the set of measurement types supported by this sensor
+    virtual std::set<MeasurementType> GetSupportedMeasurements() const = 0;
 
-  virtual int ReadMeasuredValues(MeasuredValues* measuredValues) = 0;
+    // Read all supported measurements
+    // Returns a vector of Measurement structs for all available measurements
+    virtual std::vector<Measurement> ReadAllMeasurements() = 0;
 
-  virtual int StartContinuousMeasurement() = 0;
+    // Start continuous measurement mode (if supported)
+    // Returns 0 on success, non-zero on failure
+    virtual int StartContinuousMeasurement() = 0;
 
-private:
+protected:
+    // Set sensor altitude (protected, as it’s implementation-specific)
+    virtual int SetSensorAltitude(float sensorAltitude) = 0;
 
-  virtual int SetSensorAltitude(float sensorAltitude) = 0;
-
-  float m_sensorAltitude;
-
+    float m_sensorAltitude;
 };

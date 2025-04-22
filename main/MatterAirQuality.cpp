@@ -28,14 +28,33 @@ void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
     AddAirQualityClusterFeatures();
 
     // Add Concentration Measurement Clusters
-    AddRelativeHumidityMeasurementCluster();
-    AddTemperatureMeasurementCluster();
-    AddCarbonDioxideConcentrationMeasurementCluster();
-    AddPm1ConcentrationMeasurementCluster();
-    AddPm25ConcentrationMeasurementCluster();
-    AddPm10ConcentrationMeasurementCluster();
-    AddNitrogenDioxideConcentrationMeasurementCluster();
-    AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
+    std::set<AirQualitySensor::MeasurementType> supportedMeasurements = m_airQualitySensor->GetSupportedMeasurements();
+
+    // Add Concentration Measurement Clusters based on supported measurements
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::AmbientHumidity)) {
+        AddRelativeHumidityMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::AmbientTemperature)) {
+        AddTemperatureMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::CO2)) {
+        AddCarbonDioxideConcentrationMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::ParticulateMatter1p0)) {
+        AddPm1ConcentrationMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::ParticulateMatter2p5)) {
+        AddPm25ConcentrationMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::ParticulateMatter10p0)) {
+        AddPm10ConcentrationMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::NOxIndex)) {
+        AddNitrogenDioxideConcentrationMeasurementCluster();
+    }
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::VOCIndex)) {
+        AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
+    }
 
     // Initialize Air Quality Sensor
     m_airQualitySensor->Init();
@@ -535,61 +554,85 @@ void MatterAirQuality::MeasureAirQuality()
 {
     AirQualitySensor* sensor = m_airQualitySensor;
 
-    AirQualitySensor::MeasuredValues* measuredValues = new AirQualitySensor::MeasuredValues();
+    // Read all measurements from the sensor
+    std::vector<AirQualitySensor::Measurement> measurements = sensor->ReadAllMeasurements();
 
-    int status = sensor->ReadMeasuredValues(measuredValues);
-    if (status != NO_ERROR) {
-        ESP_LOGE(TAG, "MeasureAirQuality: sensor->ReadMeasuredValues failed with status=%d", status);
-        return;    
-    };
+    // Check if measurements are empty (indicating an error)
+    if (measurements.empty()) {
+        ESP_LOGE(TAG, "MeasureAirQuality: sensor->ReadAllMeasurements failed or returned no data");
+        return;
+    }
 
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: AmbientHumidity: %f", measuredValues->AmbientHumidity);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: AmbientTemperature: %f", measuredValues->AmbientTemperature);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: CO2: %f", measuredValues->CO2);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: NOx: %f", measuredValues->NOxIndex);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: VOC: %f", measuredValues->VOCIndex);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM1: %f", measuredValues->ParticulateMatter1p0);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM2.5: %f", measuredValues->ParticulateMatter2p5);
-    ESP_LOGI(TAG, "MeasureAirQualityTimerCallback: PM10: %f", measuredValues->ParticulateMatter10p0);
+    // Create a map to store measurement values for easy access
+    std::map<AirQualitySensor::MeasurementType, float> measurementMap;
+    for (const auto& measurement : measurements) {
+        measurementMap[measurement.type] = measurement.value;
+    }
 
-    m_measurements.AddMeasurementNow(
-        RelativeHumidityMeasurement::Id,
-        measuredValues->AmbientHumidity
-    );
+    // Log measurements (only if they exist in the map)
+    if (measurementMap.count(AirQualitySensor::MeasurementType::AmbientHumidity)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: AmbientHumidity: %f", measurementMap[AirQualitySensor::MeasurementType::AmbientHumidity]);
+        m_measurements.AddMeasurementNow(
+            RelativeHumidityMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::AmbientHumidity]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-        TemperatureMeasurement::Id,
-        measuredValues->AmbientTemperature
-    );
+    if (measurementMap.count(AirQualitySensor::MeasurementType::AmbientTemperature)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: AmbientTemperature: %f", measurementMap[AirQualitySensor::MeasurementType::AmbientTemperature]);
+        m_measurements.AddMeasurementNow(
+            TemperatureMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::AmbientTemperature]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-        CarbonDioxideConcentrationMeasurement::Id,
-        measuredValues->CO2
-    );
+    if (measurementMap.count(AirQualitySensor::MeasurementType::CO2)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: CO2: %f", measurementMap[AirQualitySensor::MeasurementType::CO2]);
+        m_measurements.AddMeasurementNow(
+            CarbonDioxideConcentrationMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::CO2]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-        TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
-        measuredValues->VOCIndex
-    );
+    if (measurementMap.count(AirQualitySensor::MeasurementType::NOxIndex)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: NOx: %f", measurementMap[AirQualitySensor::MeasurementType::NOxIndex]);
+        m_measurements.AddMeasurementNow(
+            NitrogenDioxideConcentrationMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::NOxIndex]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-        NitrogenDioxideConcentrationMeasurement::Id,
-        measuredValues->NOxIndex);
+    if (measurementMap.count(AirQualitySensor::MeasurementType::VOCIndex)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: VOC: %f", measurementMap[AirQualitySensor::MeasurementType::VOCIndex]);
+        m_measurements.AddMeasurementNow(
+            TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::VOCIndex]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-    Pm1ConcentrationMeasurement::Id,
-    measuredValues->ParticulateMatter1p0
-    );
+    if (measurementMap.count(AirQualitySensor::MeasurementType::ParticulateMatter1p0)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: PM1: %f", measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter1p0]);
+        m_measurements.AddMeasurementNow(
+            Pm1ConcentrationMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter1p0]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-        Pm25ConcentrationMeasurement::Id,
-        measuredValues->ParticulateMatter2p5
-    );
+    if (measurementMap.count(AirQualitySensor::MeasurementType::ParticulateMatter2p5)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: PM2.5: %f", measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter2p5]);
+        m_measurements.AddMeasurementNow(
+            Pm25ConcentrationMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter2p5]
+        );
+    }
 
-    m_measurements.AddMeasurementNow(
-        Pm10ConcentrationMeasurement::Id,
-        measuredValues->ParticulateMatter10p0
-    );
+    if (measurementMap.count(AirQualitySensor::MeasurementType::ParticulateMatter10p0)) {
+        ESP_LOGI(TAG, "MeasureAirQuality: PM10: %f", measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter10p0]);
+        m_measurements.AddMeasurementNow(
+            Pm10ConcentrationMeasurement::Id,
+            measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter10p0]
+        );
+    }
 }
 
 // Timer callback to measure air quality

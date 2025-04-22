@@ -1,22 +1,31 @@
 #include "AirQualitySensor.h"
+#include <set>
+#include <vector>
+#include <optional>
 
 class SensirionSEN66 : public AirQualitySensor
 {
 public:
-
-  SensirionSEN66(float sensorAltitude = 0.0f)
+    // Constructor
+    explicit SensirionSEN66(float sensorAltitude = 0.0f)
       : AirQualitySensor(sensorAltitude)
-  {
-  }
+    {
+    }
 
-  void Init();
-    
-  int ReadMeasuredValues(MeasuredValues* measuredValues);
+    // Initialize the sensor
+    void Init() override;
 
-  int StartContinuousMeasurement();
+    // Get the set of measurement types supported by this sensor
+    std::set<AirQualitySensor::MeasurementType> GetSupportedMeasurements() const override;
 
-private:
+    // Read all supported measurements
+    std::vector<AirQualitySensor::Measurement> ReadAllMeasurements() override;
 
-  int SetSensorAltitude(float altitude);
+    // Start continuous measurement mode
+    int StartContinuousMeasurement() override;
+
+protected:
+    // Set sensor altitude
+    int SetSensorAltitude(float altitude) override;
 
 };
