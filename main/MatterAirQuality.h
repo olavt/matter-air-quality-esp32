@@ -26,6 +26,9 @@ class MatterAirQuality
 
         static constexpr uint32_t MEASUREMENT_SAMPLE_SECONDS = 60;
 
+        // Map from MeasurementType to Matter cluster ID
+        static const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> measurementTypeToClusterId;
+
         endpoint_t* m_lightEndpoint;
         endpoint_t* m_airQualityEndpoint;
         AirQualitySensor* m_airQualitySensor;

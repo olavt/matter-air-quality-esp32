@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
 class AirQualitySensor
@@ -20,6 +21,9 @@ public:
         NOxIndex,
         CO2
     };
+
+    // Convert MeasurementType to string
+    static std::string MeasurementTypeToString(MeasurementType type);
 
     // Struct to hold a single measurement value and its type
     struct Measurement {

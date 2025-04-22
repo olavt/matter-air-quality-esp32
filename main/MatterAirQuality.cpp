@@ -12,6 +12,17 @@ using namespace chip::app::Clusters;
 
 static const char *TAG = "MatterAirQuality";
 
+const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> MatterAirQuality::measurementTypeToClusterId = {
+    {AirQualitySensor::MeasurementType::AmbientHumidity, RelativeHumidityMeasurement::Id},
+    {AirQualitySensor::MeasurementType::AmbientTemperature, TemperatureMeasurement::Id},
+    {AirQualitySensor::MeasurementType::CO2, CarbonDioxideConcentrationMeasurement::Id},
+    {AirQualitySensor::MeasurementType::NOxIndex, NitrogenDioxideConcentrationMeasurement::Id},
+    {AirQualitySensor::MeasurementType::VOCIndex, TotalVolatileOrganicCompoundsConcentrationMeasurement::Id},
+    {AirQualitySensor::MeasurementType::ParticulateMatter1p0, Pm1ConcentrationMeasurement::Id},
+    {AirQualitySensor::MeasurementType::ParticulateMatter2p5, Pm25ConcentrationMeasurement::Id},
+    {AirQualitySensor::MeasurementType::ParticulateMatter10p0, Pm10ConcentrationMeasurement::Id}
+};
+
 MatterAirQuality::MatterAirQuality(AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint)
 {
     m_airQualitySensor = airQualitySensor;
@@ -563,75 +574,19 @@ void MatterAirQuality::MeasureAirQuality()
         return;
     }
 
-    // Create a map to store measurement values for easy access
-    std::map<AirQualitySensor::MeasurementType, float> measurementMap;
+    // Process each measurement
     for (const auto& measurement : measurements) {
-        measurementMap[measurement.type] = measurement.value;
-    }
 
-    // Log measurements (only if they exist in the map)
-    if (measurementMap.count(AirQualitySensor::MeasurementType::AmbientHumidity)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: AmbientHumidity: %f", measurementMap[AirQualitySensor::MeasurementType::AmbientHumidity]);
-        m_measurements.AddMeasurementNow(
-            RelativeHumidityMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::AmbientHumidity]
-        );
-    }
+        // Look up the cluster ID for the measurement type
+        auto it = measurementTypeToClusterId.find(measurement.type);
 
-    if (measurementMap.count(AirQualitySensor::MeasurementType::AmbientTemperature)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: AmbientTemperature: %f", measurementMap[AirQualitySensor::MeasurementType::AmbientTemperature]);
-        m_measurements.AddMeasurementNow(
-            TemperatureMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::AmbientTemperature]
-        );
-    }
+        // Log the measurement
+        ESP_LOGI(TAG, "MeasureAirQuality: %s: %f",
+                    AirQualitySensor::MeasurementTypeToString(measurement.type).c_str(),
+                    measurement.value);
 
-    if (measurementMap.count(AirQualitySensor::MeasurementType::CO2)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: CO2: %f", measurementMap[AirQualitySensor::MeasurementType::CO2]);
-        m_measurements.AddMeasurementNow(
-            CarbonDioxideConcentrationMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::CO2]
-        );
-    }
-
-    if (measurementMap.count(AirQualitySensor::MeasurementType::NOxIndex)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: NOx: %f", measurementMap[AirQualitySensor::MeasurementType::NOxIndex]);
-        m_measurements.AddMeasurementNow(
-            NitrogenDioxideConcentrationMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::NOxIndex]
-        );
-    }
-
-    if (measurementMap.count(AirQualitySensor::MeasurementType::VOCIndex)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: VOC: %f", measurementMap[AirQualitySensor::MeasurementType::VOCIndex]);
-        m_measurements.AddMeasurementNow(
-            TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::VOCIndex]
-        );
-    }
-
-    if (measurementMap.count(AirQualitySensor::MeasurementType::ParticulateMatter1p0)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: PM1: %f", measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter1p0]);
-        m_measurements.AddMeasurementNow(
-            Pm1ConcentrationMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter1p0]
-        );
-    }
-
-    if (measurementMap.count(AirQualitySensor::MeasurementType::ParticulateMatter2p5)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: PM2.5: %f", measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter2p5]);
-        m_measurements.AddMeasurementNow(
-            Pm25ConcentrationMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter2p5]
-        );
-    }
-
-    if (measurementMap.count(AirQualitySensor::MeasurementType::ParticulateMatter10p0)) {
-        ESP_LOGI(TAG, "MeasureAirQuality: PM10: %f", measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter10p0]);
-        m_measurements.AddMeasurementNow(
-            Pm10ConcentrationMeasurement::Id,
-            measurementMap[AirQualitySensor::MeasurementType::ParticulateMatter10p0]
-        );
+        // Add the measurement to the measurements store
+        m_measurements.AddMeasurementNow(it->second, measurement.value);
     }
 }
 
