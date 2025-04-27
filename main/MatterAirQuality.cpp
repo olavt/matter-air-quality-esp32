@@ -503,6 +503,43 @@ AirQualityEnum MatterAirQuality::ClassifyAirQualityByPM25()
     }
 }
 
+void MatterAirQuality::MeasureAirQuality()
+{
+    AirQualitySensor* sensor = m_airQualitySensor;
+
+    // Read all measurements from the sensor
+    std::vector<AirQualitySensor::Measurement> measurements = sensor->ReadAllMeasurements();
+
+    // Check if measurements are empty (indicating an error)
+    if (measurements.empty()) {
+        ESP_LOGE(TAG, "MeasureAirQuality: sensor->ReadAllMeasurements failed or returned no data");
+        return;
+    }
+
+    // Process each measurement
+    for (const auto& measurement : measurements) {
+
+        // Look up the cluster ID for the measurement type
+        auto it = measurementTypeToClusterId.find(measurement.type);
+
+            // Check if the cluster ID was found
+        if (it == measurementTypeToClusterId.end()) {
+            // Log an error and skip this measurement
+            ESP_LOGW(TAG, "MeasureAirQuality: No cluster ID found for measurement type %s",
+                    AirQualitySensor::MeasurementTypeToString(measurement.type).c_str());
+            continue; // Skip to the next measurement
+        }
+
+        // Log the measurement
+        ESP_LOGI(TAG, "MeasureAirQuality: %s: %f",
+                    AirQualitySensor::MeasurementTypeToString(measurement.type).c_str(),
+                    measurement.value);
+
+        // Add the measurement to the measurements store
+        m_measurements.AddMeasurementNow(it->second, measurement.value);
+    }
+}
+
 void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint, endpoint_t* lightEndpoint, MatterAirQuality* matterAirQuality)
 {
     std::vector<uint32_t> clusterIds = matterAirQuality->m_measurements.GetIds();
@@ -561,51 +598,22 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
     SetLightByAirQuality(lightEndpoint, airQuality);
 }
 
-void MatterAirQuality::MeasureAirQuality()
-{
-    AirQualitySensor* sensor = m_airQualitySensor;
-
-    // Read all measurements from the sensor
-    std::vector<AirQualitySensor::Measurement> measurements = sensor->ReadAllMeasurements();
-
-    // Check if measurements are empty (indicating an error)
-    if (measurements.empty()) {
-        ESP_LOGE(TAG, "MeasureAirQuality: sensor->ReadAllMeasurements failed or returned no data");
-        return;
-    }
-
-    // Process each measurement
-    for (const auto& measurement : measurements) {
-
-        // Look up the cluster ID for the measurement type
-        auto it = measurementTypeToClusterId.find(measurement.type);
-
-        // Log the measurement
-        ESP_LOGI(TAG, "MeasureAirQuality: %s: %f",
-                    AirQualitySensor::MeasurementTypeToString(measurement.type).c_str(),
-                    measurement.value);
-
-        // Add the measurement to the measurements store
-        m_measurements.AddMeasurementNow(it->second, measurement.value);
-    }
-}
-
 // Timer callback to measure air quality
 void MatterAirQuality::MeasureAirQualityTimerCallback(void *arg)
 {
-    MatterAirQuality* airQuality = static_cast<MatterAirQuality*>(arg);
+    MatterAirQuality* matterAirQuality = static_cast<MatterAirQuality*>(arg);
 
-    airQuality->MeasureAirQuality();
-    
+    matterAirQuality->MeasureAirQuality();
+
     // Need to use ScheduleLambda to execute the updates to the clusters on the Matter thread for thread safety
     chip::DeviceLayer::SystemLayer().ScheduleLambda(
         [
-            airQualityEndpoint = airQuality->m_airQualityEndpoint,
-            lightEndpoint = airQuality->m_lightEndpoint,
-            airQuality
+            airQualityEndpoint = matterAirQuality->m_airQualityEndpoint,
+            lightEndpoint = matterAirQuality->m_lightEndpoint,
+            matterAirQuality
         ]
         {
-            UpdateAirQualityAttributes(airQualityEndpoint, lightEndpoint, airQuality);    
+            UpdateAirQualityAttributes(airQualityEndpoint, lightEndpoint, matterAirQuality);    
         }
     );
 

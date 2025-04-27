@@ -296,7 +296,7 @@ extern "C" void app_main()
 
     ConfigureGeneralDiagnosticsCluster(node);
     AddColorControlClusterFeatures(endpoint);
-    //AddSoftwareDiagnosticsCluster(node);
+    AddSoftwareDiagnosticsCluster(node);
 
     AirQualitySensor* airQualitySensor = new SensirionSEN66(610.0f);
     matterAirQuality = new MatterAirQuality(airQualitySensor, endpoint);

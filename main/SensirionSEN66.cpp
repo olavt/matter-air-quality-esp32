@@ -60,7 +60,7 @@ std::vector<AirQualitySensor::Measurement> SensirionSEN66::ReadAllMeasurements()
     if (particulateMatter1p0 != 0xFFFF) {
       measurements.push_back({MeasurementType::ParticulateMatter1p0, particulateMatter1p0 / 10.0f});
     }
-    
+
     if (particulateMatter2p5 != 0xFFFF) {
       measurements.push_back({MeasurementType::ParticulateMatter2p5, particulateMatter2p5 / 10.0f});
     }
@@ -88,7 +88,7 @@ std::vector<AirQualitySensor::Measurement> SensirionSEN66::ReadAllMeasurements()
     if (noxIndex != 0x7FFF) {
       measurements.push_back({MeasurementType::NOxIndex, noxIndex / 10.0f});
     }
-    
+
     if (co2 != 0xFFFF) {
       measurements.push_back({MeasurementType::CO2, static_cast<float>(co2)});
     }
