@@ -299,8 +299,8 @@ extern "C" void app_main()
     AddSoftwareDiagnosticsCluster(node);
 
     AirQualitySensor* airQualitySensor = new SensirionSEN66(610.0f);
-    matterAirQuality = new MatterAirQuality(airQualitySensor, endpoint);
-    matterAirQuality->CreateAirQualityEndpoint(node);
+    matterAirQuality = new MatterAirQuality(node, airQualitySensor, endpoint);
+    matterAirQuality->CreateEndpoint();
 
     /* Mark deferred persistence for some attributes that might be changed rapidly */
     attribute_t *current_level_attribute = attribute::get(light_endpoint_id, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id);

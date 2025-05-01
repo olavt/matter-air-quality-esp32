@@ -14,9 +14,9 @@ class MatterAirQuality
 {
     public:
 
-        MatterAirQuality(AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint);
+        MatterAirQuality(node_t* node, AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint);
 
-        void CreateAirQualityEndpoint(node_t* node);
+        void CreateEndpoint();
         
         void StartMeasurements();
 
@@ -29,6 +29,7 @@ class MatterAirQuality
         // Map from MeasurementType to Matter cluster ID
         static const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> measurementTypeToClusterId;
 
+        node_t* m_node;
         endpoint_t* m_lightEndpoint;
         endpoint_t* m_airQualityEndpoint;
         AirQualitySensor* m_airQualitySensor;

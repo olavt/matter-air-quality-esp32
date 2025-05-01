@@ -23,17 +23,18 @@ const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> MatterAirQ
     {AirQualitySensor::MeasurementType::ParticulateMatter10p0, Pm10ConcentrationMeasurement::Id}
 };
 
-MatterAirQuality::MatterAirQuality(AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint)
+MatterAirQuality::MatterAirQuality(node_t* node, AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint)
 {
+    m_node = node;
     m_airQualitySensor = airQualitySensor;
     m_lightEndpoint = lightEndpoint;
 }
 
-void MatterAirQuality::CreateAirQualityEndpoint(node_t* node)
+void MatterAirQuality::CreateEndpoint()
 {
     // Create Air Quality Endpoint
     air_quality_sensor::config_t air_quality_config;
-    m_airQualityEndpoint = air_quality_sensor::create(node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
+    m_airQualityEndpoint = air_quality_sensor::create(m_node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
     ABORT_APP_ON_FAILURE(m_airQualityEndpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
 
     AddAirQualityClusterFeatures();
@@ -503,6 +504,11 @@ AirQualityEnum MatterAirQuality::ClassifyAirQualityByPM25()
     }
 }
 
+float getElapsedSeconds()
+{
+    return static_cast<float>(esp_timer_get_time()) / 1000000.0f;
+}
+
 void MatterAirQuality::MeasureAirQuality()
 {
     AirQualitySensor* sensor = m_airQualitySensor;
@@ -530,13 +536,17 @@ void MatterAirQuality::MeasureAirQuality()
             continue; // Skip to the next measurement
         }
 
+        uint32_t clusterId = it->second;
+
         // Log the measurement
         ESP_LOGI(TAG, "MeasureAirQuality: %s: %f",
                     AirQualitySensor::MeasurementTypeToString(measurement.type).c_str(),
                     measurement.value);
 
+        float elapsedSeconds = getElapsedSeconds();
+
         // Add the measurement to the measurements store
-        m_measurements.AddMeasurementNow(it->second, measurement.value);
+        m_measurements.AddMeasurement(clusterId, measurement.value, elapsedSeconds);
     }
 }
 
@@ -565,19 +575,19 @@ void MatterAirQuality::UpdateAirQualityAttributes(endpoint_t* airQualityEndpoint
             UpdateAttributeValueFloat(
                 airQualityEndpoint,
                 clusterId,
-                0x00000000, // Measured Value
+                0x00000000, // MeasuredValue
                 matterAirQuality->m_measurements.GetLatest(clusterId));
     
             UpdateAttributeValueFloat(
                 airQualityEndpoint,
                 clusterId,
-                0x00000005, // Average Measured Value
+                0x00000005, // AverageMeasured Value
                 matterAirQuality->m_measurements.GetAverage(clusterId));
 
             UpdateAttributeValueFloat(
                 airQualityEndpoint,
                 clusterId,
-                0x00000003, // Peak Measured Value
+                0x00000003, // PeakMeasured Value
                 matterAirQuality->m_measurements.GetPeak(clusterId));
         }
     }

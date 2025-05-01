@@ -16,9 +16,6 @@ public:
     // Add a measurement for a specific ID
     void AddMeasurement(uint32_t id, float value, float elapsedTimeSeconds);
 
-    // Add a measurement for a specific ID using current elapsed time
-    void AddMeasurementNow(uint32_t id, float value);
-
     // Get the latest measurement for an ID
     float GetLatest(uint32_t id);
 

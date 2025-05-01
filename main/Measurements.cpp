@@ -2,11 +2,6 @@
 #include "esp_timer.h"
 #include <stdexcept>
 
-float getElapsedSeconds()
-{
-    return static_cast<float>(esp_timer_get_time()) / 1000000.0f;
-}
-
 void Measurements::AddId(uint32_t id, uint32_t averageWindowSizeSeconds, uint32_t peakWindowSizeSeconds)
 {
     m_measurements.emplace(id, MeasuredValues(id, averageWindowSizeSeconds, peakWindowSizeSeconds));
@@ -16,11 +11,6 @@ void Measurements::AddMeasurement(uint32_t id, float value, float elapsedTimeSec
 {
     auto it = m_measurements.find(id);
     it->second.Add(value, elapsedTimeSeconds);
-}
-
-void Measurements::AddMeasurementNow(uint32_t id, float value)
-{
-    AddMeasurement(id, value, getElapsedSeconds());
 }
 
 float Measurements::GetLatest(uint32_t id)
