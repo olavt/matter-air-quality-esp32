@@ -3,7 +3,7 @@
 #include <vector>
 #include <esp_matter.h>
 
-#include "AirQualitySensor.h"
+#include "sensors/AirQualitySensor.h"
 #include "Measurements.h"
 
 using namespace esp_matter;

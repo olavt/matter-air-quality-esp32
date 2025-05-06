@@ -13,19 +13,23 @@ public:
     }
 
     // Initialize the sensor
-    void Init() override;
+    bool Init() override;
 
     // Get the set of measurement types supported by this sensor
-    std::set<AirQualitySensor::MeasurementType> GetSupportedMeasurements() const override;
+    std::set<Sensor::MeasurementType> GetSupportedMeasurements() const override;
 
     // Read all supported measurements
     std::vector<AirQualitySensor::Measurement> ReadAllMeasurements() override;
 
+    int ActivateAutomaticSelfCalibration() override;
+
     // Start continuous measurement mode
     int StartContinuousMeasurement() override;
 
+    int SetAmbientPressure(float ambientPressureKiloPascal) override;
+
 protected:
     // Set sensor altitude
-    int SetSensorAltitude(float altitude) override;
+    int SetAltitude(float altitude) override;
 
 };

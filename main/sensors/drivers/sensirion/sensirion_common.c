@@ -30,6 +30,7 @@
  */
 
 #include "sensirion_common.h"
+
 #include "sensirion_config.h"
 
 uint16_t sensirion_common_bytes_to_uint16_t(const uint8_t* bytes) {

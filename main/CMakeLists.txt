@@ -1,5 +1,5 @@
-idf_component_register(SRC_DIRS          "." "drivers"
-                       PRIV_INCLUDE_DIRS  "." "drivers" "${ESP_MATTER_PATH}/examples/common/utils")
+idf_component_register(SRC_DIRS          "." "sensors" "sensors/drivers/sensirion"
+                       PRIV_INCLUDE_DIRS  "." "sensors" "sensors/drivers/sensirion" "${ESP_MATTER_PATH}/examples/common/utils")
 
 if (CONFIG_ENABLE_SET_CERT_DECLARATION_API)
     target_add_binary_data(${COMPONENT_TARGET} "certification_declaration/certification_declaration.der" BINARY)

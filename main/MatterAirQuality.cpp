@@ -5,22 +5,20 @@
 #include <common_macros.h>
 #include <math.h>
 
-#include "sensirion_common.h"
-
 using namespace esp_matter::attribute;
 using namespace chip::app::Clusters;
 
 static const char *TAG = "MatterAirQuality";
 
 const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> MatterAirQuality::measurementTypeToClusterId = {
-    {AirQualitySensor::MeasurementType::AmbientHumidity, RelativeHumidityMeasurement::Id},
-    {AirQualitySensor::MeasurementType::AmbientTemperature, TemperatureMeasurement::Id},
-    {AirQualitySensor::MeasurementType::CO2, CarbonDioxideConcentrationMeasurement::Id},
-    {AirQualitySensor::MeasurementType::NOxIndex, NitrogenDioxideConcentrationMeasurement::Id},
-    {AirQualitySensor::MeasurementType::VOCIndex, TotalVolatileOrganicCompoundsConcentrationMeasurement::Id},
-    {AirQualitySensor::MeasurementType::ParticulateMatter1p0, Pm1ConcentrationMeasurement::Id},
-    {AirQualitySensor::MeasurementType::ParticulateMatter2p5, Pm25ConcentrationMeasurement::Id},
-    {AirQualitySensor::MeasurementType::ParticulateMatter10p0, Pm10ConcentrationMeasurement::Id}
+    {Sensor::MeasurementType::RelativeHumidity, RelativeHumidityMeasurement::Id},
+    {Sensor::MeasurementType::Temperature, TemperatureMeasurement::Id},
+    {Sensor::MeasurementType::CO2, CarbonDioxideConcentrationMeasurement::Id},
+    {Sensor::MeasurementType::NOx, NitrogenDioxideConcentrationMeasurement::Id},
+    {Sensor::MeasurementType::VOC, TotalVolatileOrganicCompoundsConcentrationMeasurement::Id},
+    {Sensor::MeasurementType::PM1p0, Pm1ConcentrationMeasurement::Id},
+    {Sensor::MeasurementType::PM2p5, Pm25ConcentrationMeasurement::Id},
+    {Sensor::MeasurementType::PM10p0, Pm10ConcentrationMeasurement::Id}
 };
 
 MatterAirQuality::MatterAirQuality(node_t* node, AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint)
@@ -43,28 +41,28 @@ void MatterAirQuality::CreateEndpoint()
     std::set<AirQualitySensor::MeasurementType> supportedMeasurements = m_airQualitySensor->GetSupportedMeasurements();
 
     // Add Concentration Measurement Clusters based on supported measurements
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::AmbientHumidity)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::RelativeHumidity)) {
         AddRelativeHumidityMeasurementCluster();
     }
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::AmbientTemperature)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::Temperature)) {
         AddTemperatureMeasurementCluster();
     }
     if (supportedMeasurements.count(AirQualitySensor::MeasurementType::CO2)) {
         AddCarbonDioxideConcentrationMeasurementCluster();
     }
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::ParticulateMatter1p0)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::PM1p0)) {
         AddPm1ConcentrationMeasurementCluster();
     }
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::ParticulateMatter2p5)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::PM2p5)) {
         AddPm25ConcentrationMeasurementCluster();
     }
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::ParticulateMatter10p0)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::PM10p0)) {
         AddPm10ConcentrationMeasurementCluster();
     }
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::NOxIndex)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::NOx)) {
         AddNitrogenDioxideConcentrationMeasurementCluster();
     }
-    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::VOCIndex)) {
+    if (supportedMeasurements.count(AirQualitySensor::MeasurementType::VOC)) {
         AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
     }
 
@@ -78,9 +76,6 @@ void MatterAirQuality::StartMeasurements()
     SetLightOnOff(m_lightEndpoint, false);
     SetLightLevelPercent(m_lightEndpoint, 0.0);
     SetLightColorHSV(m_lightEndpoint, 0, 0);
-
-    int status = m_airQualitySensor->StartContinuousMeasurement();
-    ABORT_APP_ON_FAILURE(status == NO_ERROR, ESP_LOGE(TAG, "Air Quality Sensor StartContiniousMeasurement failed."));
 
     // Setup periodic timer to measure air quality
 
