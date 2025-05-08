@@ -109,6 +109,28 @@ int SensirionSEN66::ActivateAutomaticSelfCalibration()
   return status;
 }
 
+std::string SensirionSEN66::GetProductName()
+{
+  return "SEN66";
+}
+
+std::string SensirionSEN66::GetVendorName()
+{
+  return "Sensirion";
+}
+
+int SensirionSEN66::GetFirmwareVersion(int* firmwareMajorVersion, int* firmwareMinorVersion)
+{
+  uint8_t majorVersion;
+  uint8_t minorVersion;
+  int16_t status = sen66_get_version(&majorVersion, &minorVersion);
+
+  *firmwareMajorVersion = majorVersion;
+  *firmwareMinorVersion = minorVersion;
+
+  return status;
+}
+
 // Sets the current sensor altitude. The sensor altitude can be used for pressure compensation in the
 // CO2 sensor. The default sensor altitude value is set to 0 meters above sea level. Valid input values
 // are between 0 and 3000m.

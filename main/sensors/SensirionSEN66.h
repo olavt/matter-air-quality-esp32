@@ -15,6 +15,12 @@ public:
     // Initialize the sensor
     bool Init() override;
 
+    virtual std::string GetProductName() override;
+
+    virtual std::string GetVendorName() override;
+
+    int GetFirmwareVersion(int* firmwareMajorVersion, int* firmwareMinorVersion) override;
+
     // Get the set of measurement types supported by this sensor
     std::set<Sensor::MeasurementType> GetSupportedMeasurements() const override;
 
@@ -27,6 +33,7 @@ public:
     int StartContinuousMeasurement() override;
 
     int SetAmbientPressure(float ambientPressureKiloPascal) override;
+
 
 protected:
     // Set sensor altitude

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Sensor.h"
+#include "sensor.h"
+#include <string>
 
 
 class AirQualitySensor : public Sensor
@@ -20,6 +21,12 @@ public:
 
     // Initialize the sensor
     bool Init() override;
+
+    virtual std::string GetProductName() = 0;
+
+    virtual std::string GetVendorName() = 0;
+
+    virtual int GetFirmwareVersion(int* firmwareMajorVersion, int* firmwareMinorVersion) = 0;
 
     // Get the set of measurement types supported by this sensor
     virtual std::set<MeasurementType> GetSupportedMeasurements() const = 0;

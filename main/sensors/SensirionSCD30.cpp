@@ -29,6 +29,29 @@ std::set<Sensor::MeasurementType> SensirionSCD30::GetSupportedMeasurements() con
     };
 }
 
+std::string SensirionSCD30::GetProductName()
+{
+  return "SCD30";
+}
+
+std::string SensirionSCD30::GetVendorName()
+{
+  return "Sensirion";
+}
+
+int SensirionSCD30::GetFirmwareVersion(int* firmwareMajorVersion, int* firmwareMinorVersion)
+{
+  uint8_t majorVersion;
+  uint8_t minorVersion;
+
+  int16_t status = scd30_read_firmware_version(&majorVersion, &minorVersion);
+
+  *firmwareMajorVersion = majorVersion;
+  *firmwareMinorVersion = minorVersion;
+
+  return status;
+}
+
 std::vector<AirQualitySensor::Measurement> SensirionSCD30::ReadAllMeasurements()
 {
   float co2_concentration;
