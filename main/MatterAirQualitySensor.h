@@ -3,6 +3,7 @@
 #include <esp_matter.h>
 
 #include "sensors/AirQualitySensor.h"
+#include "MatterExtendedColorLight.h"
 #include "Measurements.h"
 
 using namespace esp_matter;
@@ -19,12 +20,12 @@ class MatterAirQualitySensor
 {
     public:
 
-    // Constructs a MatterAirQualitySensor instance, associating it with a Matter node,
-    // a physical air quality sensor, and a light endpoint for visualization.
-    // @param node The Matter node to which this sensor's endpoint will be attached.
-    // @param airQualitySensor Pointer to the physical air quality sensor providing measurements.
-    // @param lightEndpoint Pointer to the light endpoint used to indicate air quality status.
-        MatterAirQualitySensor(node_t* node, AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint);
+        // Constructs a MatterAirQualitySensor instance, associating it with a Matter node,
+        // a physical air quality sensor, and a light endpoint for visualization.
+        // @param node The Matter node to which this sensor's endpoint will be attached.
+        // @param airQualitySensor Pointer to the physical air quality sensor providing measurements.
+        // @param lightEndpoint Pointer to the light endpoint used to indicate air quality status.
+        MatterAirQualitySensor(node_t* node, AirQualitySensor* airQualitySensor,  MatterExtendedColorLight* lightEndpoint);
 
         // Creates and configures a Matter endpoint for the air quality sensor, initializing
         // relevant clusters (e.g., Air Quality, Temperature, Humidity) and their attributes.
@@ -43,7 +44,7 @@ class MatterAirQualitySensor
         static const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> measurementTypeToClusterId;
 
         node_t* m_node;
-        endpoint_t* m_lightEndpoint;
+        MatterExtendedColorLight* m_lightEndpoint;
         endpoint_t* m_airQualityEndpoint;
         AirQualitySensor* m_airQualitySensor;
         Measurements m_measurements;
@@ -66,13 +67,7 @@ class MatterAirQualitySensor
 
         void AddAirQualityClusterFeatures();
 
-        static void SetLightOnOff(endpoint_t* lightEndpoint, bool on);
-
-        static void SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent);
-
-        static void SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation);
-
-        static void SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality);
+        void SetLightByAirQuality(AirQualityEnum airQuality);
 
         AirQualityEnum ClassifyAirQualityByCO2();
 
@@ -81,5 +76,9 @@ class MatterAirQualitySensor
         AirQualityEnum ClassifyAirQualityByPM25();
 
         static void UpdateAirQualityAttributes(MatterAirQualitySensor* airQuality);
+
+        void UpdateAttributeValueInt16(uint32_t cluster_id, uint32_t attribute_id, int16_t value);
+
+        void UpdateAttributeValueFloat(uint32_t cluster_id, uint32_t attribute_id, float value);
 
 };

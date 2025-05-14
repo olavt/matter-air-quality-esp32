@@ -6,6 +6,23 @@
 #include "drivers/sensirion/sensirion_common.h"
 #include "drivers/sensirion/sensirion_i2c_hal.h"
 
+namespace {
+    constexpr uint16_t INVALID_UINT16 = 0xFFFF;
+    constexpr int16_t INVALID_INT16 = 0x7FFF;
+    constexpr float PM_CONVERSION_FACTOR = 10.0f;
+    constexpr float HUMIDITY_CONVERSION_FACTOR = 100.0f;
+    constexpr float TEMPERATURE_CONVERSION_FACTOR = 200.0f;
+    constexpr float VOC_CONVERSION_FACTOR = 10.0f;
+    constexpr float NOX_CONVERSION_FACTOR = 10.0f;
+}
+
+// Initialize SensorData with default invalid values
+SensirionSEN66::SensorData::SensorData()
+    : pm1p0(INVALID_UINT16), pm2p5(INVALID_UINT16), pm4p0(INVALID_UINT16), pm10p0(INVALID_UINT16),
+      humidity(INVALID_INT16), temperature(INVALID_INT16), vocIndex(INVALID_INT16), noxIndex(INVALID_INT16),
+      co2(INVALID_UINT16) {
+}
+
 bool SensirionSEN66::Init()
 {
   sensirion_i2c_hal_init();
@@ -35,143 +52,67 @@ std::set<AirQualitySensor::MeasurementType> SensirionSEN66::GetSupportedMeasurem
     };
 }
 
-std::vector<AirQualitySensor::Measurement> SensirionSEN66::ReadAllMeasurements()
-{
-  uint16_t particulateMatter1p0 = 0;
-  uint16_t particulateMatter2p5 = 0;
-  uint16_t particulateMatter4p0 = 0;
-  uint16_t particulateMatter10p0 = 0;
-  int16_t ambientHumidity = 0;
-  int16_t ambientTemperature = 0;
-  int16_t vocIndex = 0;
-  int16_t noxIndex = 0;
-  uint16_t co2 = 0;
-
-  int16_t status = sen66_read_measured_values_as_integers(
-    &particulateMatter1p0,
-    &particulateMatter2p5,
-    &particulateMatter4p0,
-    &particulateMatter10p0,
-    &ambientHumidity,
-    &ambientTemperature,
-    &vocIndex,
-    &noxIndex,
-    &co2);
-
-    std::vector<AirQualitySensor::Measurement> measurements;
-
-    if (status != NO_ERROR) {
-      return measurements; // Return an empty vector on error
-    }
-
-    if (particulateMatter1p0 != 0xFFFF) {
-      measurements.push_back({MeasurementType::PM1p0, particulateMatter1p0 / 10.0f});
-    }
-
-    if (particulateMatter2p5 != 0xFFFF) {
-      measurements.push_back({MeasurementType::PM2p5, particulateMatter2p5 / 10.0f});
-    }
-
-    if (particulateMatter4p0 != 0xFFFF) {
-      measurements.push_back({MeasurementType::PM4p0, particulateMatter4p0 / 10.0f});
-    }
-
-    if (particulateMatter10p0 != 0xFFFF) {
-      measurements.push_back({MeasurementType::PM10p0, particulateMatter10p0 / 10.0f});
-    }
-
-    if (ambientHumidity != 0x7FFF) {
-      measurements.push_back({MeasurementType::RelativeHumidity, ambientHumidity / 100.0f});
-    }
-
-    if (ambientTemperature != 0x7FFF) {
-      measurements.push_back({MeasurementType::Temperature, ambientTemperature / 200.0f});
-    }
-
-    if (vocIndex != 0x7FFF) {
-      measurements.push_back({MeasurementType::VOC, vocIndex / 10.0f});
-    }
-
-    if (noxIndex != 0x7FFF) {
-      measurements.push_back({MeasurementType::NOx, noxIndex / 10.0f});
-    }
-
-    if (co2 != 0xFFFF) {
-      measurements.push_back({MeasurementType::CO2, static_cast<float>(co2)});
-    }
-
-    return measurements;
+// Private helper function to read all sensor values
+int16_t SensirionSEN66::ReadSensorData(SensorData& data) {
+    return sen66_read_measured_values_as_integers(
+        &data.pm1p0, &data.pm2p5, &data.pm4p0, &data.pm10p0,
+        &data.humidity, &data.temperature, &data.vocIndex, &data.noxIndex, &data.co2);
 }
 
-std::optional<float> SensirionSEN66::MeasureTemperature()
-{
-  uint16_t particulateMatter1p0 = 0;
-  uint16_t particulateMatter2p5 = 0;
-  uint16_t particulateMatter4p0 = 0;
-  uint16_t particulateMatter10p0 = 0;
-  int16_t ambientHumidity = 0;
-  int16_t ambientTemperature = 0;
-  int16_t vocIndex = 0;
-  int16_t noxIndex = 0;
-  uint16_t co2 = 0;
+std::vector<AirQualitySensor::Measurement> SensirionSEN66::ReadAllMeasurements() {
+      SensorData data;
+      std::vector<AirQualitySensor::Measurement> measurements;
 
-  int16_t status = sen66_read_measured_values_as_integers(
-    &particulateMatter1p0,
-    &particulateMatter2p5,
-    &particulateMatter4p0,
-    &particulateMatter10p0,
-    &ambientHumidity,
-    &ambientTemperature,
-    &vocIndex,
-    &noxIndex,
-    &co2);
-  if (status != NO_ERROR) {
-      return std::nullopt; // Return nullopt if temperature is not available
-  }
-    
+      if (ReadSensorData(data) != NO_ERROR) {
+          return measurements; // Return empty vector on error
+      }
 
-  if (ambientTemperature == 0x7FFF) {
-    return std::nullopt; // Return nullopt if temperature is not available
-  }
+      // Add valid measurements to the vector
+      if (data.pm1p0 != INVALID_UINT16) {
+          measurements.push_back({MeasurementType::PM1p0, data.pm1p0 / PM_CONVERSION_FACTOR});
+      }
+      if (data.pm2p5 != INVALID_UINT16) {
+          measurements.push_back({MeasurementType::PM2p5, data.pm2p5 / PM_CONVERSION_FACTOR});
+      }
+      if (data.pm4p0 != INVALID_UINT16) {
+          measurements.push_back({MeasurementType::PM4p0, data.pm4p0 / PM_CONVERSION_FACTOR});
+      }
+      if (data.pm10p0 != INVALID_UINT16) {
+          measurements.push_back({MeasurementType::PM10p0, data.pm10p0 / PM_CONVERSION_FACTOR});
+      }
+      if (data.humidity != INVALID_INT16) {
+          measurements.push_back({MeasurementType::RelativeHumidity, data.humidity / HUMIDITY_CONVERSION_FACTOR});
+      }
+      if (data.temperature != INVALID_INT16) {
+          measurements.push_back({MeasurementType::Temperature, data.temperature / TEMPERATURE_CONVERSION_FACTOR});
+      }
+      if (data.vocIndex != INVALID_INT16) {
+          measurements.push_back({MeasurementType::VOC, data.vocIndex / VOC_CONVERSION_FACTOR});
+      }
+      if (data.noxIndex != INVALID_INT16) {
+          measurements.push_back({MeasurementType::NOx, data.noxIndex / NOX_CONVERSION_FACTOR});
+      }
+      if (data.co2 != INVALID_UINT16) {
+          measurements.push_back({MeasurementType::CO2, static_cast<float>(data.co2)});
+      }
 
-  float temperature = ambientTemperature / 200.0f;
-
-  return temperature;
+      return measurements;
 }
 
-std::optional<float> SensirionSEN66::MeasureRelativeHumidity()
-{
-  uint16_t particulateMatter1p0 = 0;
-  uint16_t particulateMatter2p5 = 0;
-  uint16_t particulateMatter4p0 = 0;
-  uint16_t particulateMatter10p0 = 0;
-  int16_t ambientHumidity = 0;
-  int16_t ambientTemperature = 0;
-  int16_t vocIndex = 0;
-  int16_t noxIndex = 0;
-  uint16_t co2 = 0;
+std::optional<float> SensirionSEN66::MeasureTemperature() {
+    SensorData data;
+    if (ReadSensorData(data) != NO_ERROR || data.temperature == INVALID_INT16) {
+        return std::nullopt;
+    }
+    return data.temperature / TEMPERATURE_CONVERSION_FACTOR;
+}
 
-  int16_t status = sen66_read_measured_values_as_integers(
-    &particulateMatter1p0,
-    &particulateMatter2p5,
-    &particulateMatter4p0,
-    &particulateMatter10p0,
-    &ambientHumidity,
-    &ambientTemperature,
-    &vocIndex,
-    &noxIndex,
-    &co2);
-  if (status != NO_ERROR) {
-      return std::nullopt; // Return nullopt if temperature is not available
-  }
-    
-  if (ambientHumidity == 0x7FFF) {
-    return std::nullopt; // Return nullopt if humidity is not available
-  }
-
-  float relativeHumidity = ambientHumidity / 100.0f;
-
-  return relativeHumidity;
+std::optional<float> SensirionSEN66::MeasureRelativeHumidity() {
+    SensorData data;
+    if (ReadSensorData(data) != NO_ERROR || data.humidity == INVALID_INT16) {
+        return std::nullopt;
+    }
+    return data.humidity / HUMIDITY_CONVERSION_FACTOR;
 }
 
 int SensirionSEN66::ActivateAutomaticSelfCalibration()

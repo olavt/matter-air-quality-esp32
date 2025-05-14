@@ -43,4 +43,6 @@ class MatterTemperatureSensor
         // @param matterTemperature Pointer to the MatterTemperatureSensor instance to update.
         static void UpdateTemperatureAttributes(MatterTemperatureSensor* matterTemperature);
 
+        void UpdateAttributeValueInt16(uint32_t cluster_id, uint32_t attribute_id, int16_t value);
+
 };

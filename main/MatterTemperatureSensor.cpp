@@ -52,9 +52,9 @@ void MatterTemperatureSensor::UpdateMeasurements()
     );
 }
 
-static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+void MatterTemperatureSensor::UpdateAttributeValueInt16(uint32_t cluster_id, uint32_t attribute_id, int16_t value)
 {
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(m_temperatureEndpoint);
 
     esp_matter_attr_val_t val = esp_matter_int16(value);
 
@@ -70,8 +70,7 @@ void MatterTemperatureSensor::UpdateTemperatureAttributes(MatterTemperatureSenso
     float temperatureCelsius = matterTemperature->m_temperatureMeasurement.value();
     int16_t reportedTemperature = static_cast<int16_t>(std::round(temperatureCelsius * 100));
 
-    UpdateAttributeValueInt16(
-        matterTemperature->m_temperatureEndpoint,
+    matterTemperature->UpdateAttributeValueInt16(
         TemperatureMeasurement::Id,
         TemperatureMeasurement::Attributes::MeasuredValue::Id,
         reportedTemperature);  

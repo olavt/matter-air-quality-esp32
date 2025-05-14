@@ -21,7 +21,7 @@ const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> MatterAirQ
     {Sensor::MeasurementType::PM10p0, Pm10ConcentrationMeasurement::Id}
 };
 
-MatterAirQualitySensor::MatterAirQualitySensor(node_t* node, AirQualitySensor* airQualitySensor,  endpoint_t* lightEndpoint)
+MatterAirQualitySensor::MatterAirQualitySensor(node_t* node, AirQualitySensor* airQualitySensor,  MatterExtendedColorLight* lightEndpoint)
 {
     m_node = node;
     m_airQualitySensor = airQualitySensor;
@@ -74,61 +74,20 @@ endpoint_t* MatterAirQualitySensor::CreateEndpoint()
 
 void MatterAirQualitySensor::Init()
 {
-    // Initialize LED to a known state
-    SetLightOnOff(m_lightEndpoint, false);
-    SetLightLevelPercent(m_lightEndpoint, 0.0);
-    SetLightColorHSV(m_lightEndpoint, 0, 0);
 }
 
-void static UpdateAttributeValueBool(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, bool value)
+void MatterAirQualitySensor::UpdateAttributeValueInt16(uint32_t cluster_id, uint32_t attribute_id, int16_t value)
 {
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    esp_matter_attr_val_t val = esp_matter_bool(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-}
-
-void static UpdateAttributeValueUInt8(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint8_t value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    esp_matter_attr_val_t val = esp_matter_uint8(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-}
-
-static void UpdateAttributeValueInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, int16_t value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(m_airQualityEndpoint);
 
     esp_matter_attr_val_t val = esp_matter_int16(value);
 
     esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
 }
 
-static void UpdateAttributeValueUInt16(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint16_t value)
+void MatterAirQualitySensor::UpdateAttributeValueFloat(uint32_t cluster_id, uint32_t attribute_id, float value)
 {
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    esp_matter_attr_val_t val = esp_matter_uint16(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-}
-
-static void UpdateAttributeValueUInt32(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, uint32_t value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
-
-    esp_matter_attr_val_t val = esp_matter_uint32(value);
-
-    ESP_LOGI(TAG, "UpdateAttributeValueUInt32: endpoint_id=%u cluster_id=%lu attribute_id=%lu value=%lu", endpoint_id, cluster_id, attribute_id, value); 
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-}
-
-static void UpdateAttributeValueFloat(endpoint_t* endpoint, uint32_t cluster_id, uint32_t attribute_id, float value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(endpoint);
+    uint16_t endpoint_id = esp_matter::endpoint::get_id(m_airQualityEndpoint);
 
     esp_matter_attr_val_t val = esp_matter_float(value);
 
@@ -307,55 +266,6 @@ void MatterAirQualitySensor::AddAirQualityClusterFeatures()
     cluster::air_quality::feature::extremely_poor::add(cluster);
 }
 
-void MatterAirQualitySensor::SetLightOnOff(endpoint_t* lightEndpoint, bool on)   
-{
-    UpdateAttributeValueBool(
-        lightEndpoint,
-        OnOff::Id,
-        OnOff::Attributes::OnOff::Id,
-        on);
-}
-
-void MatterAirQualitySensor::SetLightLevelPercent(endpoint_t* lightEndpoint, float levelPercent)
-{
-    // For the CurrentLevel attribute:
-    // A value of 0x00 SHALL NOT be used.
-    // A value of 0x01 SHALL indicate the minimum level that can be attained on a device.
-    // A value of 0xFE SHALL indicate the maximum level that can be attained on a device.
-    // A value of null SHALL represent an undefined value.
-    // All other values are application specific gradations from the minimum to the maximum level. 
-    uint8_t level = static_cast<uint8_t>((levelPercent / 100.0f) * 0xFD) + 0x01;
-
-    UpdateAttributeValueUInt8(
-        lightEndpoint,
-        LevelControl::Id,
-        LevelControl::Attributes::CurrentLevel::Id,
-        level);    
-}
-
-void MatterAirQualitySensor::SetLightColorHSV(endpoint_t* lightEndpoint, uint8_t hue, uint8_t saturation)
-{
-    // Hue represents the color. It ranges from 0 to 360 degrees.
-    // 0 degrees = Red
-    // 120 degrees = Green
-    // 240 degrees = Blue
-    // In matter it's representet as a byte with the range 0 to 255.
-
-    ESP_LOGI(TAG, "SetLightColorHSV: CurrentHue=%d CurrentSaturation=%d" , hue, saturation); 
-
-    UpdateAttributeValueUInt8(
-        lightEndpoint,
-        ColorControl::Id,
-        ColorControl::Attributes::CurrentHue::Id,
-        hue);
-
-    UpdateAttributeValueUInt8(
-        lightEndpoint,
-        ColorControl::Id,
-        ColorControl::Attributes::CurrentSaturation::Id,
-        saturation);    
-}
-
 static uint8_t HueDegreesToUInt8(float degrees)
 {
     // Wrap degrees to 0-360 using modulo
@@ -368,7 +278,7 @@ static uint8_t HueDegreesToUInt8(float degrees)
     return (uint8_t)(scaled + 0.5f);    
 }
 
-void MatterAirQualitySensor::SetLightByAirQuality(endpoint_t* lightEndpoint, AirQualityEnum airQuality)
+void MatterAirQualitySensor::SetLightByAirQuality(AirQualityEnum airQuality)
 {
     uint8_t saturation = 254; // Full saturation for vivid colors. Note! 255 is reserved and should not be used.
     uint8_t hue = 0;
@@ -407,10 +317,10 @@ void MatterAirQualitySensor::SetLightByAirQuality(endpoint_t* lightEndpoint, Air
             ESP_LOGE(TAG, "Unknown air quality enum value");
             return;
     }
-    
-    SetLightOnOff(lightEndpoint, true);
-    SetLightColorHSV(lightEndpoint, hue, saturation);
-    SetLightLevelPercent(lightEndpoint, lightLevelPercent);   
+
+    m_lightEndpoint->SetLightOnOff(true);
+        m_lightEndpoint->SetLightColorHSV(hue, saturation);
+    m_lightEndpoint->SetLightLevelPercent(lightLevelPercent);  
 }
 
 AirQualityEnum MatterAirQualitySensor::ClassifyAirQualityByCO2()
@@ -541,36 +451,31 @@ void MatterAirQualitySensor::UpdateAirQualityAttributes(MatterAirQualitySensor* 
     for (uint32_t clusterId : clusterIds) {
         if (clusterId == RelativeHumidityMeasurement::Id)
         {
-            UpdateAttributeValueInt16(
-                airQualityEndpoint,
+            matterAirQuality->UpdateAttributeValueInt16(
                 RelativeHumidityMeasurement::Id,
                 RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
-                matterAirQuality->m_measurements.GetLatest(clusterId) * 100);
+                static_cast<int16_t>(std::round(matterAirQuality->m_measurements.GetLatest(clusterId) * 100)));
         }
         else if (clusterId == TemperatureMeasurement::Id)
         {
-            UpdateAttributeValueInt16(
-                airQualityEndpoint,
+            matterAirQuality->UpdateAttributeValueInt16(
                 TemperatureMeasurement::Id,
                 TemperatureMeasurement::Attributes::MeasuredValue::Id,
-                matterAirQuality->m_measurements.GetLatest(clusterId) * 100);        
+                static_cast<int16_t>(std::round(matterAirQuality->m_measurements.GetLatest(clusterId) * 100)));        
         }
         else
         {
-            UpdateAttributeValueFloat(
-                airQualityEndpoint,
+            matterAirQuality->UpdateAttributeValueFloat(
                 clusterId,
                 0x00000000, // MeasuredValue
                 matterAirQuality->m_measurements.GetLatest(clusterId));
     
-            UpdateAttributeValueFloat(
-                airQualityEndpoint,
+            matterAirQuality->UpdateAttributeValueFloat(
                 clusterId,
                 0x00000005, // AverageMeasured Value
                 matterAirQuality->m_measurements.GetAverage(clusterId));
 
-            UpdateAttributeValueFloat(
-                airQualityEndpoint,
+            matterAirQuality->UpdateAttributeValueFloat(
                 clusterId,
                 0x00000003, // PeakMeasured Value
                 matterAirQuality->m_measurements.GetPeak(clusterId));
@@ -584,11 +489,11 @@ void MatterAirQualitySensor::UpdateAirQualityAttributes(MatterAirQualitySensor* 
     // Use the worst air quality from CO2, PM2.5, and PM10
     AirQualityEnum airQuality = std::max({airQualityCO2, airQualityPM25, airQualityPM10});
     
-    UpdateAttributeValueInt16(
-        airQualityEndpoint,
+    matterAirQuality->UpdateAttributeValueInt16(
         AirQuality::Id,
         AirQuality::Attributes::AirQuality::Id,
         static_cast<int16_t>(airQuality));
 
-    SetLightByAirQuality(matterAirQuality->m_lightEndpoint, airQuality);
+    
+    matterAirQuality->SetLightByAirQuality(airQuality);
 }

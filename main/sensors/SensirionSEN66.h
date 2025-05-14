@@ -46,4 +46,22 @@ protected:
     // Set sensor altitude
     int SetAltitude(float altitude) override;
 
+private:
+
+    struct SensorData {
+        uint16_t pm1p0;
+        uint16_t pm2p5;
+        uint16_t pm4p0;
+        uint16_t pm10p0;
+        int16_t humidity;
+        int16_t temperature;
+        int16_t vocIndex;
+        int16_t noxIndex;
+        uint16_t co2;
+
+        SensorData();
+    };
+
+    int16_t ReadSensorData(SensorData& data);
+
 };
