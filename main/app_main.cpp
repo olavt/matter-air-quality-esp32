@@ -312,6 +312,9 @@ extern "C" void app_main()
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
 
+    ConfigureGeneralDiagnosticsCluster(node);
+    AddSoftwareDiagnosticsCluster(node);
+
     matterExtendedColorLight = new MatterExtendedColorLight(node, light_handle);
     endpoint_t* light_endpoint = matterExtendedColorLight->CreateEndpoint();
 
@@ -320,10 +323,8 @@ extern "C" void app_main()
     light_endpoint_id = endpoint::get_id(light_endpoint);
     ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
 
-    ConfigureGeneralDiagnosticsCluster(node);
-    AddSoftwareDiagnosticsCluster(node);
-
-    AirQualitySensor* airQualitySensor = new SensirionSEN66(610.0f);
+    AirQualitySensor* airQualitySensor = new SensirionSEN66(25.0f);
+    airQualitySensor->Init();
 
     // Create Matter Air Quality Sensor Endpoint
     matterAirQualitySensor = new MatterAirQualitySensor(node, airQualitySensor, matterExtendedColorLight);
@@ -377,7 +378,6 @@ extern "C" void app_main()
     /* Starting driver with default values */
     app_driver_light_set_defaults(light_endpoint_id);
 
-    matterAirQualitySensor->Init();
     StartUpdateSensorsTimer();
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA

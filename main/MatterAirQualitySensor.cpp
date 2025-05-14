@@ -21,19 +21,17 @@ const std::unordered_map<AirQualitySensor::MeasurementType, uint32_t> MatterAirQ
     {Sensor::MeasurementType::PM10p0, Pm10ConcentrationMeasurement::Id}
 };
 
-MatterAirQualitySensor::MatterAirQualitySensor(node_t* node, AirQualitySensor* airQualitySensor,  MatterExtendedColorLight* lightEndpoint)
+MatterAirQualitySensor::MatterAirQualitySensor(node_t* node, AirQualitySensor* airQualitySensor, MatterExtendedColorLight* lightEndpoint)
+        : MatterSensorBase(node, "MatterAirQualitySensor"), m_airQualitySensor(airQualitySensor), m_lightEndpoint(lightEndpoint)
 {
-    m_node = node;
-    m_airQualitySensor = airQualitySensor;
-    m_lightEndpoint = lightEndpoint;
 }
 
 endpoint_t* MatterAirQualitySensor::CreateEndpoint()
 {
     // Create Air Quality Endpoint
     esp_matter::endpoint::air_quality_sensor::config_t air_quality_config;
-    m_airQualityEndpoint = air_quality_sensor::create(m_node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
-    ABORT_APP_ON_FAILURE(m_airQualityEndpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
+    m_endpoint = air_quality_sensor::create(m_node, &air_quality_config, ENDPOINT_FLAG_NONE, NULL);
+    ABORT_APP_ON_FAILURE(m_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create air quality sensor endpoint"));
 
     AddAirQualityClusterFeatures();
 
@@ -66,32 +64,7 @@ endpoint_t* MatterAirQualitySensor::CreateEndpoint()
         AddTotalVolatileOrganicCompoundsConcentrationMeasurementCluster();
     }
 
-    // Initialize Air Quality Sensor
-    m_airQualitySensor->Init();
-
-    return m_airQualityEndpoint;
-}
-
-void MatterAirQualitySensor::Init()
-{
-}
-
-void MatterAirQualitySensor::UpdateAttributeValueInt16(uint32_t cluster_id, uint32_t attribute_id, int16_t value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(m_airQualityEndpoint);
-
-    esp_matter_attr_val_t val = esp_matter_int16(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-}
-
-void MatterAirQualitySensor::UpdateAttributeValueFloat(uint32_t cluster_id, uint32_t attribute_id, float value)
-{
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(m_airQualityEndpoint);
-
-    esp_matter_attr_val_t val = esp_matter_float(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+    return m_endpoint;
 }
 
 void MatterAirQualitySensor::AddRelativeHumidityMeasurementCluster()
@@ -99,7 +72,7 @@ void MatterAirQualitySensor::AddRelativeHumidityMeasurementCluster()
     m_measurements.AddId(RelativeHumidityMeasurement::Id, 60, 60);
 
     esp_matter::cluster::relative_humidity_measurement::config_t relative_humidity_config;
-    esp_matter::cluster::relative_humidity_measurement::create(m_airQualityEndpoint, &relative_humidity_config, CLUSTER_FLAG_SERVER);
+    esp_matter::cluster::relative_humidity_measurement::create(m_endpoint, &relative_humidity_config, CLUSTER_FLAG_SERVER);
 }
 
 void MatterAirQualitySensor::AddTemperatureMeasurementCluster()
@@ -108,7 +81,7 @@ void MatterAirQualitySensor::AddTemperatureMeasurementCluster()
 
     // Add TemperatureMeasurement cluster
     cluster::temperature_measurement::config_t cluster_config;
-    cluster::temperature_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster::temperature_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
 }
 
 void MatterAirQualitySensor::AddCarbonDioxideConcentrationMeasurementCluster()
@@ -117,7 +90,7 @@ void MatterAirQualitySensor::AddCarbonDioxideConcentrationMeasurementCluster()
 
     cluster::carbon_dioxide_concentration_measurement::config_t cluster_config;
     cluster_config.measurement_medium = static_cast<uint8_t>(CarbonDioxideConcentrationMeasurement::MeasurementMediumEnum::kAir);
-    cluster_t* cluster = esp_matter::cluster::carbon_dioxide_concentration_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = esp_matter::cluster::carbon_dioxide_concentration_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
     
     // Add the NumericMeasurement (MEA) Feature flag    
     cluster::carbon_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
@@ -141,7 +114,7 @@ void MatterAirQualitySensor::AddPm1ConcentrationMeasurementCluster()
 
     esp_matter::cluster::pm1_concentration_measurement::config_t cluster_config;
     cluster_config.measurement_medium = static_cast<uint8_t>(Pm1ConcentrationMeasurement::MeasurementMediumEnum::kAir);
-    cluster_t* cluster = esp_matter::cluster::pm1_concentration_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = esp_matter::cluster::pm1_concentration_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
 
     // Add the NumericMeasurement (MEA) Feature flag    
     cluster::pm1_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
@@ -165,7 +138,7 @@ void MatterAirQualitySensor::AddPm25ConcentrationMeasurementCluster()
 
     esp_matter::cluster::pm25_concentration_measurement::config_t cluster_config;
     cluster_config.measurement_medium = static_cast<uint8_t>(Pm25ConcentrationMeasurement::MeasurementMediumEnum::kAir);
-    cluster_t* cluster = esp_matter::cluster::pm25_concentration_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = esp_matter::cluster::pm25_concentration_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
 
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::pm25_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
@@ -189,7 +162,7 @@ void MatterAirQualitySensor::AddPm10ConcentrationMeasurementCluster()
 
     esp_matter::cluster::pm10_concentration_measurement::config_t cluster_config;
     cluster_config.measurement_medium = static_cast<uint8_t>(Pm10ConcentrationMeasurement::MeasurementMediumEnum::kAir);
-    cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = esp_matter::cluster::pm10_concentration_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
 
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::pm10_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
@@ -213,7 +186,7 @@ void MatterAirQualitySensor::AddNitrogenDioxideConcentrationMeasurementCluster()
 
     esp_matter::cluster::nitrogen_dioxide_concentration_measurement::config_t cluster_config;
     cluster_config.measurement_medium = static_cast<uint8_t>(NitrogenDioxideConcentrationMeasurement::MeasurementMediumEnum::kAir);
-    cluster_t* cluster = esp_matter::cluster::nitrogen_dioxide_concentration_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = esp_matter::cluster::nitrogen_dioxide_concentration_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
 
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::nitrogen_dioxide_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
@@ -237,7 +210,7 @@ void MatterAirQualitySensor::AddTotalVolatileOrganicCompoundsConcentrationMeasur
 
     esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::config_t cluster_config;
     cluster_config.measurement_medium = static_cast<uint8_t>(TotalVolatileOrganicCompoundsConcentrationMeasurement::MeasurementMediumEnum::kAir);
-    cluster_t* cluster = esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::create(m_airQualityEndpoint, &cluster_config, CLUSTER_FLAG_SERVER);
+    cluster_t* cluster = esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::create(m_endpoint, &cluster_config, CLUSTER_FLAG_SERVER);
 
     // Add the NumericMeasurement (MEA) Feature flag
     cluster::total_volatile_organic_compounds_concentration_measurement::feature::numeric_measurement::config_t numeric_measurement_config;
@@ -257,7 +230,7 @@ void MatterAirQualitySensor::AddTotalVolatileOrganicCompoundsConcentrationMeasur
 
 void MatterAirQualitySensor::AddAirQualityClusterFeatures()
 {
-    cluster_t *cluster = cluster::get(m_airQualityEndpoint, AirQuality::Id);
+    cluster_t *cluster = cluster::get(m_endpoint, AirQuality::Id);
 
     /* Add additional features to the Air Quality cluster */
     cluster::air_quality::feature::fair::add(cluster);
@@ -431,37 +404,24 @@ void MatterAirQualitySensor::UpdateMeasurements()
         m_measurements.AddMeasurement(clusterId, measurement.value, elapsedSeconds);
     }
 
-    // Need to use ScheduleLambda to execute the updates to the clusters on the Matter thread for thread safety
-    chip::DeviceLayer::SystemLayer().ScheduleLambda(
-        [
-            matterAirQuality = this
-        ]
-        {
-            UpdateAirQualityAttributes(matterAirQuality);    
-        }
-    );
-
+    // Schedule the update of the attributes on the Matter thread
+    // This is necessary for thread safety, as the measurements may be updated from a different thread.
+    ScheduleAttributeUpdate(&UpdateAirQualityAttributes, this);
 }
 
 void MatterAirQualitySensor::UpdateAirQualityAttributes(MatterAirQualitySensor* matterAirQuality)
 {
-    endpoint_t* airQualityEndpoint = matterAirQuality->m_airQualityEndpoint;
-
     std::vector<uint32_t> clusterIds = matterAirQuality->m_measurements.GetIds();
     for (uint32_t clusterId : clusterIds) {
         if (clusterId == RelativeHumidityMeasurement::Id)
         {
-            matterAirQuality->UpdateAttributeValueInt16(
-                RelativeHumidityMeasurement::Id,
-                RelativeHumidityMeasurement::Attributes::MeasuredValue::Id,
-                static_cast<int16_t>(std::round(matterAirQuality->m_measurements.GetLatest(clusterId) * 100)));
+            matterAirQuality->UpdateRelativeHumidityMeasurementAttributes(
+                matterAirQuality->m_measurements.GetLatest(clusterId));
         }
         else if (clusterId == TemperatureMeasurement::Id)
         {
-            matterAirQuality->UpdateAttributeValueInt16(
-                TemperatureMeasurement::Id,
-                TemperatureMeasurement::Attributes::MeasuredValue::Id,
-                static_cast<int16_t>(std::round(matterAirQuality->m_measurements.GetLatest(clusterId) * 100)));        
+            matterAirQuality->UpdateTemperatureMeasurementAttributes(
+                matterAirQuality->m_measurements.GetLatest(clusterId));      
         }
         else
         {
@@ -494,6 +454,5 @@ void MatterAirQualitySensor::UpdateAirQualityAttributes(MatterAirQualitySensor* 
         AirQuality::Attributes::AirQuality::Id,
         static_cast<int16_t>(airQuality));
 
-    
     matterAirQuality->SetLightByAirQuality(airQuality);
 }

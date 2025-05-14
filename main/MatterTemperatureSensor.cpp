@@ -11,9 +11,8 @@ using namespace chip::app::Clusters;
 static const char *TAG = "MatterTemperatureSensor";
 
 MatterTemperatureSensor::MatterTemperatureSensor(node_t* node, TemperatureSensor* temperatureSensor)
+        : MatterSensorBase(node, "MatterTemperatureSensor"), m_temperatureSensor(temperatureSensor)
 {
-    m_node = node;
-    m_temperatureSensor = temperatureSensor;
 }
 
 endpoint_t* MatterTemperatureSensor::CreateEndpoint()
@@ -22,10 +21,10 @@ endpoint_t* MatterTemperatureSensor::CreateEndpoint()
 
     // Create Temperature Endpoint
     esp_matter::endpoint::temperature_sensor::config_t temperature_config;
-    m_temperatureEndpoint = esp_matter::endpoint::temperature_sensor::create(m_node, &temperature_config, ENDPOINT_FLAG_NONE, NULL);
-    ABORT_APP_ON_FAILURE(m_temperatureEndpoint != nullptr, ESP_LOGE(TAG, "Failed to create temperature sensor endpoint"));
+    m_endpoint = esp_matter::endpoint::temperature_sensor::create(m_node, &temperature_config, ENDPOINT_FLAG_NONE, NULL);
+    ABORT_APP_ON_FAILURE(m_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create temperature sensor endpoint"));
 
-    return m_temperatureEndpoint;
+    return m_endpoint;
 }
 
 void MatterTemperatureSensor::UpdateMeasurements()
@@ -42,36 +41,10 @@ void MatterTemperatureSensor::UpdateMeasurements()
     ESP_LOGI(TAG, "MeasureTemperature: %f", m_temperatureMeasurement.value());
 
     // Need to use ScheduleLambda to execute the updates to the clusters on the Matter thread for thread safety
-    chip::DeviceLayer::SystemLayer().ScheduleLambda(
-        [
-            matterTemperature = this
-        ]
-        {
-            UpdateTemperatureAttributes(matterTemperature);    
-        }
-    );
+    ScheduleAttributeUpdate(&UpdateAttributes, this);
 }
 
-void MatterTemperatureSensor::UpdateAttributeValueInt16(uint32_t cluster_id, uint32_t attribute_id, int16_t value)
+void MatterTemperatureSensor::UpdateAttributes(MatterTemperatureSensor* matterTemperature)
 {
-    uint16_t endpoint_id = esp_matter::endpoint::get_id(m_temperatureEndpoint);
-
-    esp_matter_attr_val_t val = esp_matter_int16(value);
-
-    esp_matter::attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-}
-
-void MatterTemperatureSensor::UpdateTemperatureAttributes(MatterTemperatureSensor* matterTemperature)
-{
-    if (!matterTemperature->m_temperatureMeasurement.has_value()) {
-        return;
-    }
-
-    float temperatureCelsius = matterTemperature->m_temperatureMeasurement.value();
-    int16_t reportedTemperature = static_cast<int16_t>(std::round(temperatureCelsius * 100));
-
-    matterTemperature->UpdateAttributeValueInt16(
-        TemperatureMeasurement::Id,
-        TemperatureMeasurement::Attributes::MeasuredValue::Id,
-        reportedTemperature);  
+    matterTemperature->UpdateTemperatureMeasurementAttributes(matterTemperature->m_temperatureMeasurement);  
 }

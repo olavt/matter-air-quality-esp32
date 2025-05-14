@@ -2,6 +2,7 @@
 
 #include <esp_matter.h>
 #include "sensors/RelativeHumiditySensor.h"
+#include "MatterSensorBase.h"
 
 using namespace esp_matter;
 using namespace esp_matter::endpoint;
@@ -11,7 +12,8 @@ using namespace chip::app::Clusters::RelativeHumidityMeasurement;
 // This class interfaces with a physical humidity sensor to read relative humidity measurements
 // and updates the corresponding Matter Relative Humidity Measurement cluster (0x0405) attributes
 // for a specified endpoint on a Matter node.
-class MatterHumiditySensor {
+class MatterHumiditySensor : public MatterSensorBase
+{
 
 public:
 
@@ -24,22 +26,20 @@ public:
     // Creates and configures a Matter endpoint for the humidity sensor, initializing
     // the Relative Humidity Measurement cluster (0x0405) and its attributes.
     // @return Pointer to the created endpoint, or nullptr on failure.
-    endpoint_t*  CreateEndpoint();
+    endpoint_t*  CreateEndpoint() override;
 
     // Reads the latest humidity measurement from the physical sensor and updates
     // the Matter Relative Humidity Measurement cluster's MeasuredValue attribute.
-    void UpdateMeasurements();
+    void UpdateMeasurements() override;
 
 private:
     
-    node_t* m_node;
-    endpoint_t* m_humidityEndpoint;
     RelativeHumiditySensor* m_humiditySensor;
     std::optional<float> m_humidityMeasurement;
 
     // Updates the Relative Humidity Measurement cluster's attributes (e.g., MeasuredValue)
     // with the latest humidity reading for the specified MatterHumiditySensor instance.
     // @param matterHumidity Pointer to the MatterHumiditySensor instance to update.
-    static void UpdateRelativeHumidityAttributes(MatterHumiditySensor* matterHumidity);
+    static void UpdateAttributes(MatterHumiditySensor* matterHumidity);
 
 };
