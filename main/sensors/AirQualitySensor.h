@@ -1,14 +1,15 @@
 #pragma once
 
-#include "sensor.h"
+#include "Sensor.h"
+#include "TemperatureSensor.h"
+#include "RelativeHumiditySensor.h"
 #include <string>
 
 
-class AirQualitySensor : public Sensor
+class AirQualitySensor : public TemperatureSensor, public RelativeHumiditySensor
 {
 
 public:
-
 
     // Constructor
     explicit AirQualitySensor(float sensorAltitude = 0.0f)
@@ -21,6 +22,15 @@ public:
 
     // Initialize the sensor
     bool Init() override;
+    
+    // Methods from Sensor
+    std::vector<Measurement> ReadAllMeasurements() override = 0;
+
+    // Methods from TemperatureSensor
+    std::optional<float> MeasureTemperature() override = 0;
+
+    // Methods from RelativeHumiditySensor
+    std::optional<float> MeasureRelativeHumidity() override = 0;
 
     virtual std::string GetProductName() = 0;
 

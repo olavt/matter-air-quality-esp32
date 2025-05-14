@@ -35,10 +35,18 @@
 using namespace chip::DeviceLayer;
 #endif
 
-#include "MatterAirQuality.h"
+#include "MatterAirQualitySensor.h"
+#include "MatterHumiditySensor.h"
+#include "MatterTemperatureSensor.h"
 #include "SensirionSEN66.h"
 
-MatterAirQuality* matterAirQuality;
+static constexpr uint32_t MEASUREMENT_SAMPLE_SECONDS = 60;
+
+MatterAirQualitySensor* matterAirQualitySensor;
+MatterTemperatureSensor* matterTemperatureSensor;
+MatterHumiditySensor* matterHumiditySensor;
+esp_timer_handle_t sensor_timer_handle;
+
 static const char *TAG = "app_main";
 uint16_t light_endpoint_id = 0;
 
@@ -258,6 +266,40 @@ void ConfigureGeneralDiagnosticsCluster(node_t* node)
     cluster::general_diagnostics::attribute::create_boot_reason(cluster, bootReason);
 }
 
+// Timer callback to measure air quality
+void UpdateSensorsTimerCallback(void *arg)
+{
+    matterAirQualitySensor->UpdateMeasurements();
+    matterTemperatureSensor->UpdateMeasurements();
+    matterHumiditySensor->UpdateMeasurements();
+}
+
+void StartUpdateSensorsTimer()
+{
+    // Setup periodic timer to update sensor measurements
+
+    esp_timer_create_args_t timer_args = {
+        .callback = &UpdateSensorsTimerCallback,
+        .arg = nullptr,
+        .dispatch_method = ESP_TIMER_TASK, // Run callback in a task (safer for I2C)
+        .name = "update_sensors_timer",
+        .skip_unhandled_events = true, // Skip if previous callback is still running
+    };
+    
+    esp_err_t err = esp_timer_create(&timer_args, &sensor_timer_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create timer: %s", esp_err_to_name(err));
+        return;
+    }
+    
+    // Start the timer to trigger every 60 seconds (1 minute)
+    err = esp_timer_start_periodic(sensor_timer_handle, MEASUREMENT_SAMPLE_SECONDS * 1000000ULL); // In microseconds
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start timer: %s", esp_err_to_name(err));
+    }
+    ESP_LOGI(TAG, "Update sensors timer started.");
+}
+
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
@@ -299,8 +341,18 @@ extern "C" void app_main()
     AddSoftwareDiagnosticsCluster(node);
 
     AirQualitySensor* airQualitySensor = new SensirionSEN66(610.0f);
-    matterAirQuality = new MatterAirQuality(node, airQualitySensor, endpoint);
-    matterAirQuality->CreateEndpoint();
+
+    // Create Matter Air Quality Sensor Endpoint
+    matterAirQualitySensor = new MatterAirQualitySensor(node, airQualitySensor, endpoint);
+    matterAirQualitySensor->CreateEndpoint();
+
+    // Create Matter Temperature Sensor Endpoint
+    matterTemperatureSensor = new MatterTemperatureSensor(node, airQualitySensor);
+    matterTemperatureSensor->CreateEndpoint();
+
+    // Create Humidity Sensor Endpoint
+    matterHumiditySensor = new MatterHumiditySensor(node, airQualitySensor);
+    matterHumiditySensor->CreateEndpoint();
 
     /* Mark deferred persistence for some attributes that might be changed rapidly */
     attribute_t *current_level_attribute = attribute::get(light_endpoint_id, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id);
@@ -353,7 +405,8 @@ extern "C" void app_main()
     /* Starting driver with default values */
     app_driver_light_set_defaults(light_endpoint_id);
 
-    matterAirQuality->StartMeasurements();
+    matterAirQualitySensor->Init();
+    StartUpdateSensorsTimer();
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
     err = esp_matter_ota_requestor_encrypted_init(s_decryption_key, s_decryption_key_len);
@@ -370,3 +423,4 @@ extern "C" void app_main()
     esp_matter::console::init();
 #endif
 }
+

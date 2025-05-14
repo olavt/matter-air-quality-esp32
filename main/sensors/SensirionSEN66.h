@@ -1,4 +1,5 @@
 #include "AirQualitySensor.h"
+#include "TemperatureSensor.h"
 #include <set>
 #include <vector>
 #include <optional>
@@ -26,6 +27,12 @@ public:
 
     // Read all supported measurements
     std::vector<AirQualitySensor::Measurement> ReadAllMeasurements() override;
+
+    // Methods from TemperatureSensor
+    std::optional<float> MeasureTemperature() override;
+
+    // Methods from RelativeHumiditySensor
+    std::optional<float> MeasureRelativeHumidity() override;
 
     int ActivateAutomaticSelfCalibration() override;
 

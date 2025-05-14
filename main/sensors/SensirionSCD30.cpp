@@ -79,6 +79,50 @@ std::vector<AirQualitySensor::Measurement> SensirionSCD30::ReadAllMeasurements()
   return measurements;
 }
 
+// Methods from TemperatureSensor
+std::optional<float> SensirionSCD30::MeasureTemperature()
+{
+    float co2_concentration;
+    float temperature;
+    float humidity;
+
+    int16_t local_error = 0;
+    local_error = scd30_await_data_ready();
+    if (local_error != NO_ERROR) {
+        return std::nullopt; // Return nullopt on error
+    }
+
+    local_error =
+        scd30_read_measurement_data(&co2_concentration, &temperature, &humidity);
+    if (local_error != NO_ERROR) {
+        return std::nullopt; // Return nullopt on error
+    }
+
+    return temperature;
+}
+
+// Methods from RelativeHumiditySensor
+std::optional<float> SensirionSCD30::MeasureRelativeHumidity()
+{
+    float co2_concentration;
+    float temperature;
+    float humidity;
+
+    int16_t local_error = 0;
+    local_error = scd30_await_data_ready();
+    if (local_error != NO_ERROR) {
+        return std::nullopt; // Return nullopt on error
+    }
+
+    local_error =
+        scd30_read_measurement_data(&co2_concentration, &temperature, &humidity);
+    if (local_error != NO_ERROR) {
+        return std::nullopt; // Return nullopt on error
+    }
+
+    return humidity;
+}
+
 int SensirionSCD30::ActivateAutomaticSelfCalibration()
 {
   int16_t status = scd30_activate_auto_calibration(1);

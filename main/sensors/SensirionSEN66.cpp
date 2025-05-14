@@ -103,6 +103,77 @@ std::vector<AirQualitySensor::Measurement> SensirionSEN66::ReadAllMeasurements()
     return measurements;
 }
 
+std::optional<float> SensirionSEN66::MeasureTemperature()
+{
+  uint16_t particulateMatter1p0 = 0;
+  uint16_t particulateMatter2p5 = 0;
+  uint16_t particulateMatter4p0 = 0;
+  uint16_t particulateMatter10p0 = 0;
+  int16_t ambientHumidity = 0;
+  int16_t ambientTemperature = 0;
+  int16_t vocIndex = 0;
+  int16_t noxIndex = 0;
+  uint16_t co2 = 0;
+
+  int16_t status = sen66_read_measured_values_as_integers(
+    &particulateMatter1p0,
+    &particulateMatter2p5,
+    &particulateMatter4p0,
+    &particulateMatter10p0,
+    &ambientHumidity,
+    &ambientTemperature,
+    &vocIndex,
+    &noxIndex,
+    &co2);
+  if (status != NO_ERROR) {
+      return std::nullopt; // Return nullopt if temperature is not available
+  }
+    
+
+  if (ambientTemperature == 0x7FFF) {
+    return std::nullopt; // Return nullopt if temperature is not available
+  }
+
+  float temperature = ambientTemperature / 200.0f;
+
+  return temperature;
+}
+
+std::optional<float> SensirionSEN66::MeasureRelativeHumidity()
+{
+  uint16_t particulateMatter1p0 = 0;
+  uint16_t particulateMatter2p5 = 0;
+  uint16_t particulateMatter4p0 = 0;
+  uint16_t particulateMatter10p0 = 0;
+  int16_t ambientHumidity = 0;
+  int16_t ambientTemperature = 0;
+  int16_t vocIndex = 0;
+  int16_t noxIndex = 0;
+  uint16_t co2 = 0;
+
+  int16_t status = sen66_read_measured_values_as_integers(
+    &particulateMatter1p0,
+    &particulateMatter2p5,
+    &particulateMatter4p0,
+    &particulateMatter10p0,
+    &ambientHumidity,
+    &ambientTemperature,
+    &vocIndex,
+    &noxIndex,
+    &co2);
+  if (status != NO_ERROR) {
+      return std::nullopt; // Return nullopt if temperature is not available
+  }
+    
+  if (ambientHumidity == 0x7FFF) {
+    return std::nullopt; // Return nullopt if humidity is not available
+  }
+
+  float relativeHumidity = ambientHumidity / 100.0f;
+
+  return relativeHumidity;
+}
+
 int SensirionSEN66::ActivateAutomaticSelfCalibration()
 {
   int16_t status = sen66_set_co2_sensor_automatic_self_calibration(1);
